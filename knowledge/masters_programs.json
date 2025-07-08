@@ -1,0 +1,134 @@
+{
+  "masters_programs": [
+    {
+      "name": "Computer Science - Algorithms, Languages and Logic",
+      "code": "MPALG",
+      "description": "Focuses on theoretical computer science, programming languages, and mathematical logic",
+      "specializations": ["Algorithms", "Programming Languages", "Logic and Verification"],
+      "career_paths": ["Software Architect", "Research Scientist", "Algorithm Developer"],
+      "prerequisites": ["Strong mathematical foundation", "Programming experience"],
+      "difficulty": "high",
+      "eligible_programs": ["Computer Science and Engineering"]
+    },
+    {
+      "name": "Computer Science - Computer Systems and Networks",
+      "code": "MPCSN", 
+      "description": "Covers distributed systems, networks, and computer architecture",
+      "specializations": ["Distributed Systems", "Network Security", "Computer Architecture"],
+      "career_paths": ["Systems Engineer", "Network Architect", "Security Specialist"],
+      "prerequisites": ["Computer systems knowledge", "Network fundamentals"],
+      "difficulty": "medium",
+      "eligible_programs": ["Computer Science and Engineering", "Electrical Engineering"]
+    },
+    {
+      "name": "Software Engineering and Technology",
+      "code": "MPSET",
+      "description": "Practical software development, project management, and technology innovation",
+      "specializations": ["Software Architecture", "Project Management", "Technology Innovation"],
+      "career_paths": ["Software Engineer", "Tech Lead", "Product Manager"],
+      "prerequisites": ["Software development experience", "Basic project experience"],
+      "difficulty": "medium",
+      "eligible_programs": ["Computer Science and Engineering"]
+    },
+    {
+      "name": "Data Science and AI",
+      "code": "MPDAI",
+      "description": "Machine learning, data analysis, and artificial intelligence applications",
+      "specializations": ["Machine Learning", "Data Mining", "AI Applications"],
+      "career_paths": ["Data Scientist", "ML Engineer", "AI Researcher"],
+      "prerequisites": ["Statistics knowledge", "Programming skills", "Mathematics"],
+      "difficulty": "high",
+      "eligible_programs": ["Computer Science and Engineering", "Mathematical Sciences"]
+    },
+    {
+      "name": "Applied Mechanics",
+      "code": "MPAME",
+      "description": "Advanced mechanics, materials science, and structural analysis",
+      "specializations": ["Solid Mechanics", "Fluid Mechanics", "Materials Science"],
+      "career_paths": ["Structural Engineer", "Materials Scientist", "R&D Engineer"],
+      "prerequisites": ["Strong physics background", "Mathematics"],
+      "difficulty": "high",
+      "eligible_programs": ["Mechanical Engineering", "Civil Engineering"]
+    },
+    {
+      "name": "Automotive Engineering",
+      "code": "MPAUE",
+      "description": "Vehicle design, propulsion systems, and automotive technology",
+      "specializations": ["Vehicle Dynamics", "Powertrain", "Autonomous Vehicles"],
+      "career_paths": ["Automotive Engineer", "Vehicle Designer", "Powertrain Engineer"],
+      "prerequisites": ["Mechanical systems knowledge", "Control systems"],
+      "difficulty": "medium",
+      "eligible_programs": ["Mechanical Engineering", "Electrical Engineering"]
+    },
+    {
+      "name": "Production Engineering",
+      "code": "MPPRE",
+      "description": "Manufacturing processes, automation, and industrial systems",
+      "specializations": ["Manufacturing Systems", "Industrial Automation", "Quality Management"],
+      "career_paths": ["Production Engineer", "Manufacturing Manager", "Process Optimizer"],
+      "prerequisites": ["Industrial systems knowledge", "Process understanding"],
+      "difficulty": "medium",
+      "eligible_programs": ["Mechanical Engineering", "Industrial Engineering"]
+    },
+    {
+      "name": "Systems, Control and Mechatronics",
+      "code": "MPSCM",
+      "description": "Control theory, robotics, and mechatronic systems",
+      "specializations": ["Control Systems", "Robotics", "Mechatronics"],
+      "career_paths": ["Control Engineer", "Robotics Engineer", "Systems Engineer"],
+      "prerequisites": ["Control theory", "Electronics basics", "Programming"],
+      "difficulty": "high",
+      "eligible_programs": ["Mechanical Engineering", "Electrical Engineering", "Computer Science and Engineering"]
+    },
+    {
+      "name": "Electric Power Engineering",
+      "code": "MPEPE",
+      "description": "Power systems, renewable energy, and electrical grid technology",
+      "specializations": ["Power Systems", "Renewable Energy", "Smart Grids"],
+      "career_paths": ["Power Systems Engineer", "Energy Consultant", "Grid Engineer"],
+      "prerequisites": ["Circuit analysis", "Power systems basics"],
+      "difficulty": "medium",
+      "eligible_programs": ["Electrical Engineering"]
+    },
+    {
+      "name": "Communication Engineering",
+      "code": "MPCOE",
+      "description": "Wireless communications, signal processing, and network technologies",
+      "specializations": ["Wireless Communications", "Signal Processing", "Network Technologies"],
+      "career_paths": ["Communications Engineer", "RF Engineer", "Network Engineer"],
+      "prerequisites": ["Signal processing", "Electronics", "Mathematics"],
+      "difficulty": "high",
+      "eligible_programs": ["Electrical Engineering", "Computer Science and Engineering"]
+    },
+    {
+      "name": "Embedded Electronic System Design",
+      "code": "MPEES",
+      "description": "Embedded systems, microprocessors, and electronic design",
+      "specializations": ["Embedded Systems", "FPGA Design", "IoT Systems"],
+      "career_paths": ["Embedded Engineer", "Hardware Designer", "IoT Developer"],
+      "prerequisites": ["Digital electronics", "Programming", "Microprocessors"],
+      "difficulty": "high",
+      "eligible_programs": ["Electrical Engineering", "Computer Science and Engineering"]
+    },
+    {
+      "name": "Sustainable Energy Systems",
+      "code": "MPSES",
+      "description": "Renewable energy technologies, energy storage, and sustainable development",
+      "specializations": ["Solar Energy", "Wind Power", "Energy Storage", "Smart Grids"],
+      "career_paths": ["Renewable Energy Engineer", "Sustainability Consultant", "Energy Systems Analyst"],
+      "prerequisites": ["Energy systems knowledge", "Environmental awareness"],
+      "difficulty": "medium",
+      "eligible_programs": ["Electrical Engineering", "Mechanical Engineering", "Environmental Engineering"]
+    },
+    {
+      "name": "Innovation and Entrepreneurship",
+      "code": "MPIE",
+      "description": "Business development, innovation management, and technology commercialization",
+      "specializations": ["Technology Transfer", "Startup Development", "Innovation Management"],
+      "career_paths": ["Innovation Manager", "Technology Entrepreneur", "Business Developer"],
+      "prerequisites": ["Technical background", "Business interest"],
+      "difficulty": "low",
+      "eligible_programs": ["Computer Science and Engineering", "Mechanical Engineering", "Electrical Engineering"]
+    }
+  ]
+}

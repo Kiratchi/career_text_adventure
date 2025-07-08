@@ -1,0 +1,100 @@
+{
+  "chalmers_engineering_programs": [
+    {
+      "name": "Architecture and Technology",
+      "description": "For those interested in mathematics and technology as well as spatial design and building arts.",
+      "field": "Architecture",
+      "keywords": ["architecture", "mathematics", "design"]
+    },
+    {
+      "name": "Automation and Mechatronics",
+      "description": "Self-driving cars, household robots and transport drones are soon here to stay. Drive the development of tomorrow's smart products and services.",
+      "field": "Automation and Mechatronics",
+      "keywords": ["automation", "electronics", "robotics", "programming"]
+    },
+    {
+      "name": "Biotechnology",
+      "description": "Connect the small cell to the large system to create tomorrow's food, medicine, fuel and materials.",
+      "field": "Chemical and Biotechnology",
+      "keywords": ["biology", "health", "food", "genetic engineering"]
+    },
+    {
+      "name": "Computer Science and Engineering",
+      "description": "Develop tools that meet important societal challenges, such as intelligent vehicle control, climate simulations and smart energy supply.",
+      "field": "Computer Science",
+      "keywords": ["computer science", "IT"]
+    },
+    {
+      "name": "Electrical Engineering",
+      "description": "Develop systems for health monitoring, reduce the risk of traffic accidents and much more. The rapid development of sensors in optical and wireless communication makes it possible.",
+      "field": "Electrical Engineering",
+      "keywords": ["electrical engineering", "production", "product development"]
+    },
+    {
+      "name": "Global Systems",
+      "description": "Tackle global sustainability challenges from a systems perspective and learn how these interact with society, technology and nature.",
+      "field": "Engineering Physics, Engineering Mathematics and Global Systems",
+      "keywords": ["physics", "mathematics", "sustainability"]
+    },
+    {
+      "name": "Industrial Engineering and Management",
+      "description": "Practice finding connections and methods for analyzing technology and economics, with a focus on dynamics, technological development and innovation.",
+      "field": "Industrial Engineering",
+      "keywords": ["economics", "business development", "project management"]
+    },
+    {
+      "name": "Information Technology",
+      "description": "Are you the next game developer, interaction designer or system architect? Develop tomorrow's secure software systems and design for future needs.",
+      "field": "Information Technology",
+      "keywords": ["electrical engineering", "mathematics", "programming", "IT"]
+    },
+    {
+      "name": "Mechanical Engineering and Technical Design",
+      "description": "With your systems perspective, you contribute to sustainable solutions in areas such as transport and energy supply.",
+      "field": "Mechanical Engineering and Technical Design",
+      "keywords": ["mechanical engineering", "production"]
+    },
+    {
+      "name": "Medical Engineering",
+      "description": "Improve future health and save lives by developing advanced technology with the help of artificial intelligence, among other things.",
+      "field": "Electrical Engineering",
+      "keywords": ["electrical engineering", "medical technology", "health", "AI"]
+    },
+    {
+      "name": "Civil and Environmental Engineering",
+      "description": "Take on the entire process from planning and construction to completion of buildings, traffic routes and bridges.",
+      "field": "Civil and Environmental Engineering",
+      "keywords": ["urban planning"]
+    },
+    {
+      "name": "Technical Design",
+      "description": "With an understanding of human needs and technology's possibilities, you will develop sustainable solutions that are appealing and competitive.",
+      "field": "Mechanical Engineering and Technical Design",
+      "keywords": ["design", "human-technology", "UX"]
+    },
+    {
+      "name": "Engineering Physics",
+      "description": "Design experiments and calculations to solve tomorrow's complex problems with a strong theoretical foundation in physics, mathematics and technology.",
+      "field": "Engineering Physics, Engineering Mathematics and Global Systems",
+      "keywords": ["physics", "quantum", "space"]
+    },
+    {
+      "name": "Chemical Engineering",
+      "description": "In chemistry and chemical engineering, there are solutions for sustainable energy supply, clean drinking water and resource-efficient materials – we just need to ensure we have the knowledge and innovation capacity.",
+      "field": "Chemical and Biotechnology",
+      "keywords": ["chemistry", "physics", "mathematics", "technology"]
+    },
+    {
+      "name": "Engineering Mathematics",
+      "description": "Work with development and analysis of tomorrow's mathematical and statistical models that are central to machine learning and artificial intelligence.",
+      "field": "Engineering Physics, Engineering Mathematics and Global Systems",
+      "keywords": ["mathematics"]
+    }
+  ],
+  "metadata": {
+    "total_programs": 15,
+    "source": "Chalmers University of Technology",
+    "url": "https://www.chalmers.se/utbildning/hitta-program/",
+    "last_updated": "2025-06-27"
+  }
+}

@@ -1,0 +1,60 @@
+Create a realistic university life scenario for {student_name}.
+
+STUDENT PROFILE:
+{student_summary}
+
+PROGRAM-SPECIFIC OPPORTUNITIES:
+Your program ({program}) typically offers opportunities in:
+- Technical areas: {technical_areas}
+- Career paths: {career_paths}
+- Industry connections: {industry_connections}
+
+DIRECTOR'S ANALYSIS:
+{analysis}
+
+SCENARIO TYPE: {scenario_type}
+
+WHAT STUDENT HAS ALREADY DONE (AVOID REPEATING):
+- Activities: {activities_done}
+- Organizations: {organizations_joined}
+- Courses: {courses_taken}
+- Companies: {companies_applied}
+
+REPETITION WARNINGS:
+{repetition_warnings}
+
+VARIETY SUGGESTIONS:
+{variety_suggestions}
+
+AVAILABLE CONTEXT FROM UNIVERSITY DATA:
+{context_summary}
+
+Create a natural, engaging scenario that offers completely NEW experiences.
+
+RESPOND WITH THIS EXACT JSON FORMAT:
+{{
+"title": "Brief descriptive title for NEW experience",
+"situation": "2-3 sentences explaining a FRESH situation",
+"options": [
+  {{
+  "id": "option_1", 
+  "description": "NEW opportunity using real university data",
+  "character_implication": "How this shapes their character"
+  }},
+  {{
+  "id": "option_2",
+  "description": "DIFFERENT opportunity using real university data", 
+  "character_implication": "How this shapes their character"
+  }},
+  {{
+  "id": "option_3",
+  "description": "NOVEL opportunity building on their experiences",
+  "character_implication": "How this shapes their character"
+  }},
+  {{
+  "id": "option_4",
+  "description": "ALTERNATIVE path using real university data",
+  "character_implication": "How this shapes their character"
+  }}
+]
+}}

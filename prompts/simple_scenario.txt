@@ -1,0 +1,17 @@
+Create a simple university life scenario for {student_name}.
+
+STUDENT INFO:
+- Name: {student_name}
+- Program: {program}
+- Year: {year}
+- Context: {context}
+
+Create a realistic scenario with 2-3 options that:
+- Fits their academic level
+- Offers meaningful choices
+- Relates to university life
+- Has clear character implications
+
+Keep it simple but engaging.
+
+SCENARIO:

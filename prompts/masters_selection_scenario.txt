@@ -1,0 +1,20 @@
+Create a master's program selection scenario for {student_name}.
+
+STUDENT CONTEXT:
+- Name: {student_name}
+- Current Year: {year}
+- Bachelor Program: {program}
+- Available Programs: {available_programs_count}
+- Personalized Recommendations: {recommendations_count}
+
+URGENCY LEVEL:
+{urgency_text}
+
+Create a realistic scenario that:
+- Explains the importance of choosing a master's program
+- Mentions the academic advisor's role
+- Reflects the urgency level appropriately
+- Sets up the decision-making context
+- Uses 2-3 sentences maximum
+
+SCENARIO DESCRIPTION:

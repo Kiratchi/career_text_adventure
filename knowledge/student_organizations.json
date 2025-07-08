@@ -1,0 +1,156 @@
+{
+  "academic": [
+    {
+      "name": "Chalmers Student Union (ChS)",
+      "description": "Main student union representing all Chalmers students with elected representatives",
+      "commitment": "Medium to High - board positions require 10-20 hours/week",
+      "benefits": "Leadership experience, university influence, networking with administration",
+      "relevant_programs": ["All programs"],
+      "application_period": "Spring semester for next academic year",
+      "activities": ["Student advocacy", "Policy development", "Event organization"]
+    },
+    {
+      "name": "Computer Science Section (ConCe)",
+      "description": "Student section specifically for Computer Science and Engineering students",
+      "commitment": "Medium - organizing events and representing CS students",
+      "benefits": "Program-specific networking, industry connections, academic advocacy",
+      "relevant_programs": ["Computer Science and Engineering"],
+      "application_period": "September-October",
+      "activities": ["Tech talks", "Career fairs", "Social events", "Academic feedback"]
+    },
+    {
+      "name": "Mechanical Engineering Section (MHS)",
+      "description": "Student section for Mechanical Engineering students",
+      "commitment": "Medium - event planning and student representation",
+      "benefits": "Industry connections, peer networking, academic influence",
+      "relevant_programs": ["Mechanical Engineering"],
+      "application_period": "September-October",  
+      "activities": ["Industry visits", "Technical workshops", "Student parties"]
+    },
+    {
+      "name": "Chalmers Ventures",
+      "description": "Student-run startup incubator and entrepreneurship hub",
+      "commitment": "High - developing business ideas and attending workshops",
+      "benefits": "Entrepreneurship skills, potential startup funding, mentor network",
+      "relevant_programs": ["All programs"],
+      "application_period": "Rolling admissions",
+      "activities": ["Startup development", "Pitch competitions", "Mentorship programs"]
+    }
+  ],
+  "professional": [
+    {
+      "name": "IEEE Student Branch Gothenburg",
+      "description": "Local chapter of the world's largest professional organization for electrical engineers",
+      "commitment": "Low to Medium - workshops and networking events monthly",
+      "benefits": "Industry connections, technical workshops, international networking",
+      "relevant_programs": ["Electrical Engineering", "Computer Science and Engineering"],
+      "application_period": "Open year-round",
+      "activities": ["Technical seminars", "Industry visits", "Conference attendance"]
+    },
+    {
+      "name": "Chalmers Computer Society (Datasektionen)",
+      "description": "Professional development organization for computer science students",
+      "commitment": "Low to Medium - career events and hackathons",
+      "benefits": "Tech industry networking, coding competitions, career guidance",
+      "relevant_programs": ["Computer Science and Engineering"],
+      "application_period": "September intake",
+      "activities": ["Hackathons", "Coding competitions", "Company presentations", "Tech talks"]
+    },
+    {
+      "name": "Swedish Society of Engineers (ING)",
+      "description": "Professional engineering society with student chapter",
+      "commitment": "Low - networking events and professional development",
+      "benefits": "Professional certification path, industry networking, career resources",
+      "relevant_programs": ["All engineering programs"],
+      "application_period": "Open year-round",
+      "activities": ["Professional development", "Industry networking", "Career workshops"]
+    }
+  ],
+  "social": [
+    {
+      "name": "Chalmers International Reception Committee (CIRC)",
+      "description": "Supporting international students and promoting cultural exchange",
+      "commitment": "Medium - organizing cultural events and buddy programs",
+      "benefits": "Cultural diversity, language practice, international friendships",
+      "relevant_programs": ["All programs"],
+      "application_period": "Spring for next academic year",
+      "activities": ["Buddy program", "Cultural festivals", "City tours", "Integration events"]
+    },
+    {
+      "name": "Göta Student Nation",
+      "description": "Traditional Swedish student nation with social activities and dining",
+      "commitment": "Low to High - from casual membership to board positions",
+      "benefits": "Swedish cultural immersion, social network, traditional events",
+      "relevant_programs": ["All programs"],
+      "application_period": "Open year-round",
+      "activities": ["Formal dinners", "Traditional celebrations", "Social gatherings", "Cultural events"]
+    },
+    {
+      "name": "Chalmers International Student Association (CISA)",
+      "description": "Social organization for international and exchange students",
+      "commitment": "Low to Medium - social events and cultural activities",
+      "benefits": "International community, cultural exchange, social integration",
+      "relevant_programs": ["All programs"],
+      "application_period": "Open year-round",
+      "activities": ["Welcome events", "Cultural nights", "Travel opportunities", "Social meetups"]
+    }
+  ],
+  "technical": [
+    {
+      "name": "Chalmers Robotics Team",
+      "description": "Building and competing with autonomous robots in international competitions",
+      "commitment": "High - regular workshops and competition preparation (20+ hours/week during competition season)",
+      "benefits": "Hands-on engineering experience, teamwork, international competitions",
+      "relevant_programs": ["Mechanical Engineering", "Electrical Engineering", "Computer Science and Engineering"],
+      "application_period": "September-October",
+      "activities": ["Robot design and building", "Programming competitions", "International robotics competitions", "Technical workshops"]
+    },
+    {
+      "name": "Chalmers Formula Student Team (CFS)",
+      "description": "Designing, building and racing formula-style cars in international competitions",
+      "commitment": "Very High - like a part-time job (25-30 hours/week)",
+      "benefits": "Real engineering project experience, industry sponsorships, international recognition",
+      "relevant_programs": ["Mechanical Engineering", "Electrical Engineering"],
+      "application_period": "September interviews",
+      "activities": ["Car design and manufacturing", "Racing competitions", "Sponsor relations", "Technical innovation"]
+    },
+    {
+      "name": "Chalmers Space Team",
+      "description": "Developing rockets, satellites and space technology for competitions",
+      "commitment": "High - project-based work with intensive periods",
+      "benefits": "Aerospace engineering experience, cutting-edge technology, competition participation",
+      "relevant_programs": ["Mechanical Engineering", "Electrical Engineering", "Computer Science and Engineering"],
+      "application_period": "September-October",
+      "activities": ["Rocket development", "Satellite projects", "Space competitions", "Technology research"]
+    }
+  ],
+  "cultural": [
+    {
+      "name": "Chalmers Theatre Group (Teater Chalmers)",
+      "description": "Student theatre productions in both Swedish and English",
+      "commitment": "Medium to High during production periods (rehearsals 3-4 times/week)",
+      "benefits": "Creative outlet, public speaking skills, artistic community",
+      "relevant_programs": ["All programs"],
+      "application_period": "Auditions in September and January",
+      "activities": ["Theatre productions", "Acting workshops", "Script writing", "Technical theatre"]
+    },
+    {
+      "name": "Chalmers Academic Orchestra",
+      "description": "Symphony orchestra for students and staff",
+      "commitment": "Medium - weekly rehearsals plus concerts",
+      "benefits": "Musical development, stress relief, performance opportunities",
+      "relevant_programs": ["All programs"],
+      "application_period": "September auditions",
+      "activities": ["Classical concerts", "Weekly rehearsals", "Music festivals", "Collaborative performances"]
+    },
+    {
+      "name": "Chalmers Photography Club",
+      "description": "Photography enthusiasts sharing techniques and organizing exhibitions",
+      "commitment": "Low - participate as much as you want",
+      "benefits": "Creative development, technical skills, artistic community",
+      "relevant_programs": ["All programs"],
+      "application_period": "Open year-round",
+      "activities": ["Photo walks", "Exhibitions", "Technical workshops", "Digital editing sessions"]
+    }
+  ]
+}

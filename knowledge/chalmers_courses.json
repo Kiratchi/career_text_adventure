@@ -1,0 +1,340 @@
+{
+  "Computer Science and Engineering": {
+    "year_1": {
+      "core": [
+        "Programming Fundamentals",
+        "Mathematics I - Linear Algebra", 
+        "Mathematics II - Calculus",
+        "Physics I - Mechanics",
+        "Digital Logic Design",
+        "Introduction to Computer Science"
+      ],
+      "electives": [
+        "Web Development Fundamentals",
+        "Data Structures and Algorithms",
+        "Mobile App Development",
+        "Game Development Basics",
+        "Database Systems Introduction",
+        "Human-Computer Interaction",
+        "Computer Graphics Basics",
+        "Introduction to AI and Machine Learning"
+      ]
+    },
+    "year_2": {
+      "core": [
+        "Object-Oriented Programming",
+        "Computer Architecture",
+        "Operating Systems",
+        "Discrete Mathematics",
+        "Statistics and Probability",
+        "Software Engineering Principles"
+      ],
+      "electives": [
+        "Advanced Web Technologies",
+        "Machine Learning Applications",
+        "Computer Networks",
+        "Cybersecurity Fundamentals",
+        "Computer Vision",
+        "Natural Language Processing",
+        "Embedded Systems Programming",
+        "Compiler Design"
+      ]
+    },
+    "year_3": {
+      "core": [
+        "Algorithms and Complexity",
+        "Database Management Systems",
+        "Computer Networks",
+        "Software Project Management",
+        "Ethics in Computing"
+      ],
+      "electives": [
+        "Advanced Machine Learning",
+        "Distributed Systems",
+        "Information Security",
+        "Mobile Computing",
+        "Game Engine Development",
+        "Quantum Computing Introduction",
+        "Bioinformatics",
+        "Computer Graphics and Visualization"
+      ]
+    },
+    "year_4": {
+      "core": [
+        "Advanced Software Engineering",
+        "Research Methodology",
+        "Bachelor Thesis Preparation"
+      ],
+      "electives": [
+        "Deep Learning",
+        "Cloud Computing",
+        "DevOps and Continuous Integration",
+        "Advanced Cybersecurity",
+        "Robotics Programming",
+        "Blockchain Technology",
+        "Advanced Computer Graphics",
+        "Software Architecture"
+      ]
+    },
+    "year_5": {
+      "core": [
+        "Master Thesis",
+        "Advanced Research Methods"
+      ],
+      "electives": [
+        "Artificial Intelligence Research",
+        "Advanced System Design",
+        "Entrepreneurship in Tech",
+        "Advanced Human-Computer Interaction",
+        "High-Performance Computing",
+        "Advanced Algorithms",
+        "Technology Innovation Management"
+      ]
+    }
+  },
+  "Mechanical Engineering": {
+    "year_1": {
+      "core": [
+        "Engineering Mechanics - Statics",
+        "Mathematics I - Calculus",
+        "Mathematics II - Linear Algebra", 
+        "Physics I - Mechanics and Thermodynamics",
+        "Materials Science Fundamentals",
+        "Engineering Drawing and CAD"
+      ],
+      "electives": [
+        "CAD Design and Modeling",
+        "Manufacturing Processes Introduction",
+        "Robotics Fundamentals",
+        "Fluid Mechanics Basics",
+        "Introduction to Automation",
+        "Sustainable Engineering Design",
+        "3D Printing and Additive Manufacturing",
+        "Engineering Project Management"
+      ]
+    },
+    "year_2": {
+      "core": [
+        "Engineering Mechanics - Dynamics",
+        "Thermodynamics",
+        "Fluid Mechanics",
+        "Materials Engineering",
+        "Engineering Mathematics",
+        "Control Systems Basics"
+      ],
+      "electives": [
+        "Advanced CAD and Simulation",
+        "Manufacturing Technology",
+        "Mechatronics Systems",
+        "Heat Transfer",
+        "Mechanical Vibrations",
+        "Automotive Engineering",
+        "Energy Systems",
+        "Biomechanical Engineering"
+      ]
+    },
+    "year_3": {
+      "core": [
+        "Machine Design",
+        "Advanced Materials",
+        "Manufacturing Systems",
+        "Control Engineering",
+        "Engineering Economics"
+      ],
+      "electives": [
+        "Advanced Manufacturing",
+        "Robotics and Automation",
+        "Finite Element Analysis",
+        "Vehicle Dynamics",
+        "Renewable Energy Systems",
+        "Product Development",
+        "Industrial Engineering",
+        "Aerospace Engineering"
+      ]
+    },
+    "year_4": {
+      "core": [
+        "Advanced Machine Design",
+        "Research Methodology",
+        "Bachelor Thesis Preparation"
+      ],
+      "electives": [
+        "Advanced Robotics",
+        "Sustainable Manufacturing",
+        "Automotive Systems",
+        "Energy Conversion",
+        "Advanced Control Systems",
+        "Computational Mechanics",
+        "Innovation and Design",
+        "Systems Engineering"
+      ]
+    },
+    "year_5": {
+      "core": [
+        "Master Thesis",
+        "Advanced Engineering Research"
+      ],
+      "electives": [
+        "Advanced Sustainable Engineering",
+        "Industrial Automation",
+        "Vehicle Engineering",
+        "Advanced Energy Systems",
+        "Engineering Management",
+        "Advanced Materials Technology",
+        "Product Innovation"
+      ]
+    }
+  },
+  "Electrical Engineering": {
+    "year_1": {
+      "core": [
+        "Circuit Analysis I",
+        "Digital Logic and Design",
+        "Mathematics I - Calculus",
+        "Mathematics II - Linear Algebra",
+        "Physics I - Mechanics and Waves",
+        "Introduction to Electrical Engineering"
+      ],
+      "electives": [
+        "Power Electronics Fundamentals",
+        "Communications Systems Basics",
+        "Control Systems Introduction",
+        "VLSI Design Basics",
+        "Embedded Systems Introduction",
+        "Renewable Energy Systems",
+        "Signal Processing Fundamentals",
+        "Microcontroller Programming"
+      ]
+    },
+    "year_2": {
+      "core": [
+        "Circuit Analysis II",
+        "Signals and Systems",
+        "Electromagnetic Fields",
+        "Electronic Circuits",
+        "Probability and Statistics",
+        "Computer Programming for Engineers"
+      ],
+      "electives": [
+        "Power Systems Analysis",
+        "Digital Signal Processing",
+        "Communication Networks",
+        "Advanced Control Systems",
+        "RF and Microwave Engineering",
+        "Power Electronics Applications",
+        "Instrumentation and Measurement",
+        "Biomedical Electronics"
+      ]
+    },
+    "year_3": {
+      "core": [
+        "Power Systems",
+        "Communication Systems",
+        "Control Systems",
+        "Advanced Electronics",
+        "Engineering Economics"
+      ],
+      "electives": [
+        "Smart Grid Technology",
+        "5G and Wireless Communications",
+        "Advanced Power Electronics",
+        "VLSI System Design",
+        "Digital Image Processing",
+        "Renewable Energy Integration",
+        "Embedded System Design",
+        "Antenna Design"
+      ]
+    },
+    "year_4": {
+      "core": [
+        "Advanced Power Systems",
+        "Research Methodology",
+        "Bachelor Thesis Preparation"
+      ],
+      "electives": [
+        "Advanced Communication Systems",
+        "Power System Protection",
+        "Advanced Control Theory",
+        "IoT and Connected Systems",
+        "Electric Vehicle Technology",
+        "Advanced Signal Processing",
+        "Photonics and Optical Systems",
+        "System-on-Chip Design"
+      ]
+    },
+    "year_5": {
+      "core": [
+        "Master Thesis",
+        "Advanced Electrical Engineering Research"
+      ],
+      "electives": [
+        "Advanced Power Electronics",
+        "Advanced Communication Networks",
+        "Smart Grid and Energy Storage",
+        "Advanced Control Applications",
+        "Electrical Engineering Management",
+        "Advanced Renewable Energy",
+        "Electric Transportation Systems"
+      ]
+    }
+  },
+  "degree_requirements": {
+    "bachelor": {
+      "total_credits": 180,
+      "core_credits": 120,
+      "elective_credits": 45,
+      "thesis_credits": 15,
+      "minimum_years": 3,
+      "typical_years": 3
+    },
+    "master": {
+      "total_credits": 120,
+      "core_credits": 60,
+      "elective_credits": 30,
+      "thesis_credits": 30,
+      "minimum_years": 2,
+      "typical_years": 2,
+      "prerequisite": "Bachelor degree in related field"
+    },
+    "integrated_program": {
+      "total_credits": 300,
+      "total_years": 5,
+      "description": "Combined Bachelor + Master program"
+    }
+  },
+  "course_structure": {
+    "credit_system": "ECTS (European Credit Transfer System)",
+    "typical_course_size": "7.5 ECTS credits",
+    "full_time_semester": "30 ECTS credits",
+    "academic_year": "60 ECTS credits",
+    "grading_scale": ["A", "B", "C", "D", "E", "F", "U"],
+    "passing_grades": ["A", "B", "C", "D", "E"],
+    "failing_grades": ["F", "U"]
+  },
+  "special_programs": {
+    "exchange_compatible_courses": [
+      "International Software Development",
+      "Global Engineering Challenges", 
+      "Cross-Cultural Communication",
+      "International Project Management",
+      "European Engineering Standards",
+      "Scandinavian Innovation Models"
+    ],
+    "industry_collaboration_courses": [
+      "Industrial Placement",
+      "Company Project Course",
+      "Startup Incubator Program",
+      "Industry 4.0 Practicum",
+      "Corporate Innovation Lab",
+      "Professional Skills Development"
+    ],
+    "research_preparation": [
+      "Introduction to Research Methods",
+      "Scientific Writing and Communication",
+      "Literature Review Techniques",
+      "Data Analysis and Statistics",
+      "Presentation Skills for Engineers",
+      "Ethics in Engineering Research"
+    ]
+  }
+}

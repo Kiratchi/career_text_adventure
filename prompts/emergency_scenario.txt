@@ -1,0 +1,7 @@
+Create a basic study decision scenario for {student_name}.
+
+Provide a simple choice about their studies with 2-3 options that have clear character implications.
+
+Keep it short and realistic.
+
+SCENARIO:

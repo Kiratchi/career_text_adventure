@@ -1,0 +1,277 @@
+{
+  "last_updated": "2024-2025 Academic Year",
+  "Computer Science and Engineering": [
+    {
+      "trend": "AI/ML Integration Across Industries",
+      "impact": "Massive demand for AI skills in healthcare, finance, automotive, and entertainment sectors",
+      "relevance": "Critical for future career prospects",
+      "specific_developments": [
+        "Large Language Models revolutionizing software development",
+        "Computer vision breakthroughs in autonomous vehicles",
+        "AI ethics becoming mandatory in tech companies"
+      ],
+      "skills_needed": ["Machine Learning", "Deep Learning", "Python", "TensorFlow/PyTorch", "Ethics in AI"],
+      "career_opportunities": ["ML Engineer", "AI Research Scientist", "Data Scientist", "AI Product Manager"]
+    },
+    {
+      "trend": "Quantum Computing Advancement",
+      "impact": "Major tech companies investing billions in quantum research",
+      "relevance": "Emerging field with high growth potential",
+      "specific_developments": [
+        "IBM and Google achieving quantum advantage in specific tasks",
+        "Quantum programming languages becoming more accessible",
+        "Quantum cryptography threatening current security methods"
+      ],
+      "skills_needed": ["Quantum algorithms", "Linear algebra", "Quantum programming languages", "Cryptography"],
+      "career_opportunities": ["Quantum Software Engineer", "Quantum Research Scientist", "Quantum Security Specialist"]
+    },
+    {
+      "trend": "Sustainable Software Development",
+      "impact": "Growing focus on green computing and energy-efficient software",
+      "relevance": "Environmental consciousness increasingly valued by employers",
+      "specific_developments": [
+        "Carbon footprint monitoring in cloud services",
+        "Energy-efficient algorithms becoming standard practice",
+        "Green software engineering principles in development"
+      ],
+      "skills_needed": ["Energy-efficient programming", "Cloud optimization", "Sustainability metrics", "Green software design"],
+      "career_opportunities": ["Sustainability Engineer", "Green Software Developer", "Climate Tech Specialist"]
+    },
+    {
+      "trend": "Remote-First Development Culture",
+      "impact": "Permanent shift to distributed teams and async collaboration",
+      "relevance": "Communication and collaboration skills increasingly important",
+      "specific_developments": [
+        "DevOps and CI/CD becoming essential for remote teams",
+        "Digital collaboration tools evolving rapidly",
+        "Global talent access changing hiring practices"
+      ],
+      "skills_needed": ["DevOps", "Cloud platforms", "Async communication", "Team collaboration tools"],
+      "career_opportunities": ["DevOps Engineer", "Remote Team Lead", "Developer Experience Engineer"]
+    }
+  ],
+  "Mechanical Engineering": [
+    {
+      "trend": "Industry 4.0 and Smart Manufacturing",
+      "impact": "Manufacturing becoming increasingly digital and automated",
+      "relevance": "Digital skills complement traditional mechanical engineering",
+      "specific_developments": [
+        "IoT sensors in every manufacturing process",
+        "Digital twins for product development and testing",
+        "Predictive maintenance using AI and data analytics"
+      ],
+      "skills_needed": ["IoT systems", "Data analysis", "Digital twin software", "Industrial automation"],
+      "career_opportunities": ["Industry 4.0 Engineer", "Smart Manufacturing Specialist", "Digital Twin Developer"]
+    },
+    {
+      "trend": "Sustainable Manufacturing and Circular Economy",
+      "impact": "Companies mandated to reduce environmental impact",
+      "relevance": "Environmental engineering skills in high demand",
+      "specific_developments": [
+        "Circular design principles becoming standard",
+        "Bio-based materials replacing traditional materials",
+        "Life cycle assessment mandatory for products"
+      ],
+      "skills_needed": ["Sustainable design", "Life cycle assessment", "Bio-materials", "Circular economy principles"],
+      "career_opportunities": ["Sustainability Engineer", "Circular Design Specialist", "Environmental Compliance Manager"]
+    },
+    {
+      "trend": "Electric Vehicle Revolution",
+      "impact": "Automotive industry completely transforming",
+      "relevance": "New opportunities in EV design and manufacturing",
+      "specific_developments": [
+        "Battery technology advancing rapidly",
+        "Charging infrastructure expansion accelerating",
+        "Autonomous driving integration with EVs"
+      ],
+      "skills_needed": ["Battery systems", "Electric powertrain", "Lightweight materials", "Thermal management"],
+      "career_opportunities": ["EV Design Engineer", "Battery Systems Engineer", "Charging Infrastructure Engineer"]
+    },
+    {
+      "trend": "Additive Manufacturing (3D Printing) Maturation",
+      "impact": "3D printing moving from prototyping to production",
+      "relevance": "Manufacturing processes fundamentally changing",
+      "specific_developments": [
+        "Metal 3D printing becoming cost-competitive",
+        "3D printing integrated into supply chains",
+        "Custom manufacturing becoming economically viable"
+      ],
+      "skills_needed": ["Additive manufacturing design", "3D printing materials", "Process optimization", "Quality control"],
+      "career_opportunities": ["Additive Manufacturing Engineer", "3D Printing Specialist", "Custom Manufacturing Designer"]
+    }
+  ],
+  "Electrical Engineering": [
+    {
+      "trend": "Renewable Energy Grid Integration",
+      "impact": "Power grids transforming to accommodate renewable sources",
+      "relevance": "Power systems and sustainability expertise crucial",
+      "specific_developments": [
+        "Smart grids enabling bidirectional energy flow",
+        "Energy storage systems becoming grid-scale",
+        "Microgrids providing local energy resilience"
+      ],
+      "skills_needed": ["Smart grid technology", "Energy storage systems", "Grid integration", "Power electronics"],
+      "career_opportunities": ["Grid Integration Engineer", "Energy Storage Specialist", "Smart Grid Developer"]
+    },
+    {
+      "trend": "5G and Beyond Wireless Technologies",
+      "impact": "Next-generation communication networks enabling new applications",
+      "relevance": "RF and network engineering skills in high demand",
+      "specific_developments": [
+        "6G research beginning with terahertz frequencies",
+        "Satellite internet constellations expanding",
+        "Edge computing integration with 5G networks"
+      ],
+      "skills_needed": ["5G/6G protocols", "RF design", "Antenna systems", "Edge computing"],
+      "career_opportunities": ["5G Network Engineer", "RF Design Engineer", "Wireless Systems Architect"]
+    },
+    {
+      "trend": "Internet of Things (IoT) Ecosystem Expansion",
+      "impact": "Connected devices proliferating across all industries",
+      "relevance": "Embedded systems and security knowledge valuable",
+      "specific_developments": [
+        "Edge AI processing in IoT devices",
+        "Ultra-low power wireless protocols",
+        "IoT security becoming critical concern"
+      ],
+      "skills_needed": ["Embedded systems", "Low-power design", "IoT protocols", "Edge computing", "Cybersecurity"],
+      "career_opportunities": ["IoT Systems Engineer", "Embedded Software Developer", "IoT Security Specialist"]
+    },
+    {
+      "trend": "Electric Vehicle Charging Infrastructure",
+      "impact": "Massive infrastructure buildout requiring electrical expertise",
+      "relevance": "High-growth area combining power systems and automotive",
+      "specific_developments": [
+        "Ultra-fast charging technology development",
+        "Wireless charging systems for vehicles",
+        "Vehicle-to-grid integration systems"
+      ],
+      "skills_needed": ["Power electronics", "Charging protocols", "Grid integration", "Safety systems"],
+      "career_opportunities": ["Charging Infrastructure Engineer", "Power Electronics Engineer", "V2G Systems Developer"]
+    }
+  ],
+  "cross_disciplinary_trends": [
+    {
+      "trend": "Climate Technology (ClimaTech)",
+      "impact": "All engineering disciplines addressing climate change",
+      "relevance": "Growing investment and career opportunities",
+      "applications": ["Carbon capture systems", "Climate monitoring", "Sustainable materials", "Renewable energy"],
+      "skills_needed": ["Systems thinking", "Data analysis", "Sustainability metrics", "Interdisciplinary collaboration"]
+    },
+    {
+      "trend": "Digital Health and MedTech",
+      "impact": "Technology revolutionizing healthcare delivery",
+      "relevance": "Combines engineering with social impact",
+      "applications": ["Wearable health devices", "Telemedicine platforms", "AI diagnosis systems", "Robotic surgery"],
+      "skills_needed": ["Biomedical knowledge", "Data privacy", "Regulatory compliance", "Human factors design"]
+    },
+    {
+      "trend": "Space Technology and NewSpace",
+      "impact": "Commercial space industry expanding rapidly",
+      "relevance": "High-tech applications of all engineering disciplines",
+      "applications": ["Satellite constellations", "Space manufacturing", "Lunar/Mars exploration", "Space tourism"],
+      "skills_needed": ["Systems engineering", "Extreme environment design", "Aerospace regulations", "International collaboration"]
+    }
+  ],
+  "industry_insights": {
+    "fastest_growing_sectors": [
+      "Artificial Intelligence and Machine Learning",
+      "Renewable Energy and Sustainability",
+      "Electric Vehicles and Transportation",
+      "Cybersecurity and Data Protection",
+      "Quantum Computing and Advanced Computing",
+      "Biotechnology and Digital Health",
+      "Space Technology and Aerospace",
+      "Climate Technology and Environmental Solutions"
+    ],
+    "skills_in_highest_demand": [
+      "Programming (Python, JavaScript, C++, Rust)",
+      "Machine Learning and AI Development",
+      "Cloud Computing and DevOps",
+      "Cybersecurity and Ethical Hacking",
+      "Data Analysis and Visualization",
+      "Sustainable Engineering Design",
+      "Systems Integration and IoT",
+      "Project Management and Leadership",
+      "Digital Communication and Remote Collaboration",
+      "Regulatory Compliance and Ethics"
+    ],
+    "emerging_job_roles": [
+      "AI Ethics Specialist",
+      "Quantum Software Engineer",
+      "Climate Technology Consultant",
+      "Digital Transformation Manager",
+      "Sustainability Data Analyst",
+      "Remote Team Coordinator",
+      "Edge Computing Specialist",
+      "Green Software Developer",
+      "Bioinformatics Engineer",
+      "Space Systems Engineer"
+    ]
+  },
+  "regional_focus": {
+    "sweden_specific": [
+      {
+        "trend": "Green Steel Production",
+        "companies": ["SSAB", "HYBRIT"],
+        "impact": "Sweden leading in fossil-free steel production",
+        "relevance": "Materials engineering and process optimization skills needed"
+      },
+      {
+        "trend": "Forest-Based Bioeconomy",
+        "companies": ["Stora Enso", "UPM", "Holmen"],
+        "impact": "Traditional forest industry becoming high-tech bioeconomy",
+        "relevance": "Chemical and materials engineering opportunities"
+      },
+      {
+        "trend": "Nordic Tech Hub Growth",
+        "companies": ["Spotify", "Klarna", "King", "Skype alumni"],
+        "impact": "Stockholm becoming major European tech center",
+        "relevance": "Software engineering and startup opportunities"
+      }
+    ],
+    "gothenburg_opportunities": [
+      {
+        "sector": "Automotive Transformation",
+        "companies": ["Volvo Cars", "Volvo Group", "Polestar"],
+        "description": "Traditional automotive becoming electric and autonomous",
+        "skills_needed": ["Electric powertrains", "Autonomous systems", "Software engineering"]
+      },
+      {
+        "sector": "Maritime Technology",
+        "companies": ["Volvo Penta", "Kongsberg Maritime", "Wärtsilä"],
+        "description": "Shipping industry digitalizing and decarbonizing",
+        "skills_needed": ["Marine engineering", "Automation", "Alternative fuels"]
+      },
+      {
+        "sector": "Life Sciences",
+        "companies": ["AstraZeneca", "Sahlgrenska Science Park"],
+        "description": "Growing pharmaceutical and biotech cluster",
+        "skills_needed": ["Biomedical engineering", "Data analysis", "Regulatory affairs"]
+      }
+    ]
+  },
+  "student_action_items": {
+    "immediate_actions": [
+      "Follow industry leaders and companies on LinkedIn",
+      "Join relevant professional associations",
+      "Attend virtual conferences and webinars",
+      "Start building a professional online presence",
+      "Engage with current students and alumni in target fields"
+    ],
+    "semester_goals": [
+      "Complete online courses in trending technologies",
+      "Contribute to open source projects",
+      "Attend industry meetups and networking events",
+      "Apply for internships at forward-thinking companies",
+      "Join student organizations related to future career interests"
+    ],
+    "long_term_preparation": [
+      "Develop expertise in sustainable engineering practices",
+      "Build strong foundation in data analysis and programming",
+      "Cultivate international perspective through exchanges",
+      "Develop communication and collaboration skills",
+      "Stay updated with industry trends and technological developments"
+    ]
+  }
+}
