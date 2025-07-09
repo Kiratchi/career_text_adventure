@@ -42,7 +42,8 @@ PROMPT_CONFIG = {
     "update_current_situation": {"max_tokens": 150, "temperature": 0.6},
     "masters_selection_scenario": {"max_tokens": 500, "temperature": 0.6},
     "simple_scenario": {"max_tokens": 300, "temperature": 0.8},
-    "emergency_scenario": {"max_tokens": 200, "temperature": 0.5}
+    "emergency_scenario": {"max_tokens": 200, "temperature": 0.5},
+    "chalmers_introduction": {"max_tokens": 400, "temperature": 0.7}  # NEW: Introduction prompt config
 }
 
 
@@ -160,27 +161,71 @@ def load_prompt(prompt_name: str, **kwargs) -> str:
     """Load and format a prompt from a text file"""
     try:
         prompt_file = Path("prompts") / f"{prompt_name}.txt"
+        
         if not prompt_file.exists():
-            logger.warning(f"📝 Prompt file not found: {prompt_file}")
-            return ""
+            logger.error(f"📝 Prompt file not found: {prompt_file}")
+            raise FileNotFoundError(f"Prompt file not found: {prompt_file}")
         
         with open(prompt_file, 'r', encoding='utf-8') as f:
             prompt_content = f.read()
         
+        logger.info(f"📝 Loaded prompt file: {prompt_name}.txt ({len(prompt_content)} chars)")
+        
         # Replace variables
         try:
             formatted_prompt = prompt_content.format(**kwargs)
+            logger.info(f"📝 Successfully formatted prompt with {len(kwargs)} variables")
             return formatted_prompt
         except KeyError as e:
             logger.error(f"📝 Missing variable in prompt {prompt_name}: {e}")
-            return prompt_content
+            logger.error(f"📝 Available variables: {list(kwargs.keys())}")
+            logger.error(f"📝 Prompt content preview: {prompt_content[:200]}...")
+            raise KeyError(f"Missing variable in prompt {prompt_name}: {e}")
         except Exception as e:
             logger.error(f"📝 Error formatting prompt {prompt_name}: {e}")
-            return prompt_content
+            raise Exception(f"Error formatting prompt {prompt_name}: {e}")
             
     except Exception as e:
         logger.error(f"📝 Error loading prompt {prompt_name}: {e}")
-        return ""
+        raise
+    
+# ==================== INTRODUCTION GENERATOR ====================
+
+def generate_chalmers_introduction(player_name: str) -> str:
+    """Generate a personalized introduction to Chalmers for the player"""
+    
+    if not llm:
+        raise Exception("LLM is not available. Please check the server configuration.")
+    
+    try:
+        # Try to load prompt from file
+        prompt_content = load_prompt(
+            'introduction',
+            student_name=player_name
+        )
+        
+        logger.info(f"📝 Loaded introduction prompt for {player_name}")
+        
+        messages = [{"role": "user", "content": prompt_content}]
+        
+        introduction = make_llm_call(
+            messages,
+            call_type="chalmers_introduction",
+            prompt_name="chalmers_introduction"
+        )
+        
+        logger.info(f"✅ Generated Chalmers introduction for {player_name}")
+        return introduction
+        
+    except FileNotFoundError as e:
+        logger.error(f"Introduction prompt file missing: {e}")
+        raise Exception(f"Introduction prompt file not found: prompts/introduction.txt")
+    except KeyError as e:
+        logger.error(f"Missing variable in introduction prompt: {e}")
+        raise Exception(f"Introduction prompt has missing variable: {e}")
+    except Exception as e:
+        logger.error(f"Error generating introduction: {e}")
+        raise Exception(f"Failed to generate introduction: {e}")
 
 # ==================== KNOWLEDGE SYSTEM ====================
 
@@ -245,6 +290,10 @@ class PlayerProfile:
     comprehensive_history: str = ""
     personality_summary: str = ""
     scenario_types_encountered: Set[str] = field(default_factory=set)
+    
+    # NEW: Introduction tracking
+    has_seen_introduction: bool = False
+    introduction_text: str = ""
     
     def add_choice(self, choice_description: str, choice_type: str, choice_data: Dict[str, Any] = None):
         """Add a life choice and update tracking"""
@@ -342,7 +391,7 @@ class PlayerProfile:
 class LLMCall:
     """Track individual LLM calls"""
     timestamp: str
-    call_type: str  # 'director_analysis', 'scenario_creation', 'profile_update', etc.
+    call_type: str  # 'director_analysis', 'scenario_creation', 'profile_update', 'chalmers_introduction', etc.
     prompt: str
     model: str
     max_tokens: int
@@ -491,7 +540,7 @@ class AIDebugLogger:
 # Global debug logger
 debug_logger = AIDebugLogger()
 
-# ==================== DEBUG SYSTEM ====================
+# ==================== PROFILE UPDATE SERVICE ====================
 
 class ProfileUpdateService:
     """Service to update player profile text summaries using AI"""
@@ -1036,52 +1085,6 @@ class CheckPrerequisitesTool(DirectorTool):
             prerequisites["recommendations"].append("Seek internship opportunities for industry experience")
         
         return prerequisites
-
-class ComparePeersTool(DirectorTool):
-    """Tool to compare student with typical peer progression"""
-    
-    @property
-    def name(self) -> str:
-        return "compare_peers"
-    
-    @property
-    def description(self) -> str:
-        return "Compare student's academic and social progress with typical students at their stage. Use to create scenarios about academic pressure, competition, or peer dynamics."
-    
-    def execute(self, profile: PlayerProfile, **kwargs) -> Dict[str, Any]:
-        # Define typical progression benchmarks (adjusted for 2 choices per year)
-        typical_progression = {
-            1: {"choices": 1, "focus": "orientation", "social": 0},
-            2: {"choices": 3, "focus": "foundation", "social": 1},
-            3: {"choices": 5, "focus": "specialization", "social": 2},
-            4: {"choices": 7, "focus": "career_prep", "social": 2},
-            5: {"choices": 9, "focus": "thesis_career", "social": 3}
-        }
-        
-        typical = typical_progression.get(profile.year, typical_progression[1])
-        actual_choices = len(profile.life_choices)
-        
-        # Count social choices
-        social_choices = sum(1 for choice in profile.life_choices if any(keyword in choice.lower() for keyword in ['social', 'club', 'organization', 'team']))
-        
-        comparison = {
-            "year": profile.year,
-            "student_choices": actual_choices,
-            "typical_choices": typical["choices"],
-            "relative_progress": "ahead" if actual_choices > typical["choices"] else "behind" if actual_choices < typical["choices"] else "on_track",
-            "social_development": {
-                "student": social_choices,
-                "typical": typical["social"],
-                "status": "strong" if social_choices >= typical["social"] else "needs_development"
-            },
-            "peer_comparison": {
-                "academic_performance": "above_average" if actual_choices > typical["choices"] else "average",
-                "social_engagement": "active" if social_choices >= typical["social"] else "limited",
-                "overall_development": "well_rounded" if social_choices >= typical["social"] and actual_choices >= typical["choices"] else "focused"
-            }
-        }
-        
-        return comparison
 
 class GenerateGrowthOpportunityTool(DirectorTool):
     """Tool to identify growth opportunities based on student's development gaps (no prewritten scenarios)"""
@@ -1860,7 +1863,6 @@ class GameDirector:
             # Analysis and decision support tools
             'analyze_progress': AnalyzeProgressTool(),
             'check_prerequisites': CheckPrerequisitesTool(),
-            'compare_peers': ComparePeersTool(),
             'predict_future_paths': PredictFuturePathsTool(),
             'get_history_context': GetHistoryContextTool()
         }
@@ -2546,6 +2548,53 @@ def set_name():
         logger.error(f"Error setting name: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
 
+@app.route('/api/generate_introduction', methods=['POST'])
+def generate_introduction():
+    """Generate personalized Chalmers introduction"""
+    try:
+        data = request.json
+        session_id = data.get('session_id', 'default')
+        
+        if session_id not in game_sessions:
+            return jsonify({"success": False, "error": "Session not found"}), 404
+        
+        profile = game_sessions[session_id]
+        
+        # Check if introduction was already generated
+        if profile.has_seen_introduction and profile.introduction_text:
+            return jsonify({
+                "success": True,
+                "introduction": profile.introduction_text,
+                "cached": True
+            })
+        
+        # Generate new introduction
+        logger.info(f"🏫 Generating Chalmers introduction for {profile.name}")
+        
+        try:
+            introduction_text = generate_chalmers_introduction(profile.name)
+            
+            # Store in profile
+            profile.introduction_text = introduction_text
+            profile.has_seen_introduction = True
+            
+            return jsonify({
+                "success": True,
+                "introduction": introduction_text,
+                "cached": False
+            })
+            
+        except Exception as intro_error:
+            logger.error(f"Failed to generate introduction: {intro_error}")
+            return jsonify({
+                "success": False, 
+                "error": f"Failed to generate introduction: {str(intro_error)}"
+            }), 500
+        
+    except Exception as e:
+        logger.error(f"Error in generate_introduction endpoint: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
 @app.route('/api/set_program', methods=['POST'])
 def set_program():
     """Set player program"""
@@ -2735,7 +2784,8 @@ def debug_sessions():
                 "program": profile.program,
                 "choices_made": len(profile.life_choices),
                 "current_year": profile.estimate_current_year(),
-                "personality": profile.personality_description
+                "personality": profile.personality_description,
+                "has_seen_introduction": profile.has_seen_introduction
             }
         
         return jsonify({
@@ -2746,6 +2796,7 @@ def debug_sessions():
     except Exception as e:
         logger.error(f"Error getting debug info: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
+
 
 @app.route('/api/debug/director_tools', methods=['GET'])
 def debug_director_tools():
@@ -2988,6 +3039,7 @@ def debug_ai_process():
         return jsonify({"success": False, "error": str(e)}), 500
 
 
+
 # ==================== MAIN ====================
 
 if __name__ == '__main__':
@@ -3027,4 +3079,3 @@ if __name__ == '__main__':
     
     logger.info("🌐 Server starting on http://localhost:5000")
     app.run(debug=True, host='0.0.0.0', port=5000)
-    

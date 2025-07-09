@@ -395,6 +395,73 @@
             transform: none;
         }
 
+        /* NEW: Introduction section styling */
+        .introduction-section {
+            text-align: center;
+            padding: 40px 20px;
+            animation: fadeIn 0.8s ease-in;
+        }
+
+        .introduction-section h2 {
+            color: #4a5568;
+            margin-bottom: 30px;
+            font-size: 2rem;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .introduction-text {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            font-size: 1.1rem;
+            line-height: 1.8;
+            color: #495057;
+            text-align: left;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(102, 126, 234, 0.2);
+        }
+
+        .introduction-text.loading {
+            background: linear-gradient(90deg, #f8f9fa, #e9ecef, #f8f9fa);
+            background-size: 200% 100%;
+            animation: shimmer 2s infinite;
+            color: #6c757d;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 200px;
+        }
+
+        .introduction-continue-btn {
+            padding: 15px 40px;
+            border: none;
+            border-radius: 15px;
+            font-size: 1.2rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+            animation: pulse 2s infinite;
+        }
+
+        .introduction-continue-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(40, 167, 69, 0.4);
+            animation: none;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
         /* Choice option styles */
         .choice-option {
             background: rgba(248, 249, 250, 0.9);
@@ -715,7 +782,7 @@
     <script>
         // Game state
         let gameState = {
-            stage: 'name_input',
+            stage: 'name_input', // name_input -> introduction -> program_input -> life_choice
             sessionId: 'session_' + Date.now(),
             player: {
                 name: '',
@@ -724,7 +791,9 @@
                 selected_masters_program: '',
                 personality: 'is just starting their university journey',
                 life_choices: [],
-                current_situation: 'beginning their studies'
+                current_situation: 'beginning their studies',
+                has_seen_introduction: false,
+                introduction_text: ''
             },
             currentChoice: null,
             isGenerating: false,
@@ -903,14 +972,93 @@
                 });
                 
                 gameState.player = result.profile;
-                gameState.stage = 'program_input';
+                gameState.stage = 'introduction';
                 
-                showProgramSelection(name);
+                // Show introduction after name is set
+                showIntroduction(name);
                 updateProfileDisplay();
-                showStatus('Choose your program (use search to filter)', 'ready');
+                showStatus('AI is generating your personalized welcome...', 'loading');
             } catch (error) {
                 showStatus('Failed to set name. Please try again.', 'error');
             }
+        }
+
+        // NEW: Show introduction function
+        async function showIntroduction(name) {
+            storyContent.innerHTML = '';
+            
+            const introContainer = document.createElement('div');
+            introContainer.className = 'introduction-section fade-in';
+            introContainer.innerHTML = `
+                <h2>🏫 Welcome to Chalmers!</h2>
+                <div class="introduction-text loading" id="introText">
+                    <span>🤖 AI is crafting your personalized introduction to Chalmers University...</span>
+                </div>
+                <button class="introduction-continue-btn" id="continueBtn" onclick="showProgramSelection()" style="display: none;">
+                    Choose Your Program 🎓
+                </button>
+            `;
+            
+            storyContent.appendChild(introContainer);
+            
+            // Generate introduction via API
+            try {
+                const result = await apiCall('/generate_introduction', 'POST', {
+                    session_id: gameState.sessionId
+                });
+                
+                gameState.player.introduction_text = result.introduction;
+                gameState.player.has_seen_introduction = true;
+                
+                // Display the introduction with typing effect
+                displayIntroductionText(result.introduction);
+                
+                showStatus('Read about Chalmers, then choose your program', 'ready');
+                
+            } catch (error) {
+                // Fallback introduction if API fails
+                const fallbackIntro = `Welcome to Chalmers University of Technology, ${name}! 
+
+You're about to embark on an incredible journey at one of Europe's most prestigious technical universities. Located in the vibrant city of Gothenburg, Sweden, Chalmers has been at the forefront of technological innovation since 1829.
+
+As you walk through our modern campus, you'll discover state-of-the-art laboratories, collaborative learning spaces, and a community of brilliant minds from around the world. Here, theory meets practice, and your ideas can change the world.
+
+Your adventure begins with choosing your engineering program - each one carefully designed to prepare you for the challenges and opportunities of tomorrow. The path you choose will shape not just your academic journey, but your entire future career.
+
+Are you ready to discover which program will unlock your potential?`;
+                
+                displayIntroductionText(fallbackIntro);
+                showStatus('Read about Chalmers, then choose your program', 'ready');
+            }
+        }
+
+        // NEW: Display introduction text with typing effect
+        function displayIntroductionText(text) {
+            const introTextElement = document.getElementById('introText');
+            const continueBtn = document.getElementById('continueBtn');
+            
+            // Remove loading styles
+            introTextElement.classList.remove('loading');
+            introTextElement.innerHTML = '';
+            
+            // Split text into paragraphs
+            const paragraphs = text.split('\n\n');
+            
+            // Display each paragraph
+            paragraphs.forEach((paragraph, index) => {
+                if (paragraph.trim()) {
+                    const p = document.createElement('p');
+                    p.textContent = paragraph.trim();
+                    p.style.marginBottom = '20px';
+                    introTextElement.appendChild(p);
+                }
+            });
+            
+            // Show continue button after a delay
+            setTimeout(() => {
+                continueBtn.style.display = 'block';
+                continueBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 1500);
         }
 
         // Filter programs based on search
@@ -960,15 +1108,17 @@
         }
 
         // Show program selection
-        function showProgramSelection(name) {
-            // Clear the story content and add program selection at the top
+        function showProgramSelection() {
+            gameState.stage = 'program_input';
+            
+            // Clear the story content and add program selection
             storyContent.innerHTML = '';
             
             const programContainer = document.createElement('div');
             programContainer.className = 'fade-in';
             programContainer.innerHTML = `
-                <h2>Hello ${name}! 👋</h2>
-                <p>Welcome to Chalmers University of Technology! Choose from one of our 15 engineering programs:</p>
+                <h2>Choose Your Path! 🎓</h2>
+                <p>Now that you know about Chalmers, it's time to choose your engineering program. Each program offers unique opportunities and will shape your entire university experience:</p>
                 
                 <div class="program-search">
                     <input type="text" class="search-input" placeholder="🔍 Search programs by name, field, or keywords..." 
@@ -985,6 +1135,8 @@
             
             // Render initial program grid
             renderProgramGrid();
+            
+            showStatus('Choose your engineering program to continue', 'ready');
         }
 
         // Select program
