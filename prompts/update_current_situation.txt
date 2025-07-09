@@ -3,8 +3,6 @@ Update the current situation for {student_name}, a Year {year} {program} student
 RECENT CHOICE:
 {choice_description}
 
-CURRENT ACADEMIC PERIOD:
-{season}
 
 Write a brief current situation that:
 - Reflects their immediate circumstances after this choice

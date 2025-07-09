@@ -2,93 +2,78 @@
   "chalmers_engineering_programs": [
     {
       "name": "Architecture and Technology",
-      "description": "For those interested in mathematics and technology as well as spatial design and building arts.",
       "field": "Architecture",
-      "keywords": ["architecture", "mathematics", "design"]
+      "explanation": "Combines creative architectural design with solid engineering principles to equip students for shaping the built environment. Students learn to develop sustainable, intelligent, and aesthetically pleasing structures that address both environmental and societal needs. The program emphasizes hands-on studio projects, digital tools, and interdisciplinary collaboration."
     },
     {
       "name": "Automation and Mechatronics",
-      "description": "Self-driving cars, household robots and transport drones are soon here to stay. Drive the development of tomorrow's smart products and services.",
       "field": "Automation and Mechatronics",
-      "keywords": ["automation", "electronics", "robotics", "programming"]
+      "explanation": "Focuses on intelligent systems that integrate mechanics, electronics, and software. Students explore robotics, control systems, and automation technologies used in manufacturing, transport, and modern gadgets. The program prepares students to design, build, and optimize machines that interact with the physical world using sensors and feedback systems."
     },
     {
       "name": "Biotechnology",
-      "description": "Connect the small cell to the large system to create tomorrow's food, medicine, fuel and materials.",
       "field": "Chemical and Biotechnology",
-      "keywords": ["biology", "health", "food", "genetic engineering"]
+      "explanation": "Explores how biological systems can be engineered to solve problems in healthcare, agriculture, and sustainability. Students study molecular biology, bioprocessing, and chemical engineering to develop products like vaccines, renewable materials, and environmental solutions. The program balances theory with lab-based innovation and ethical considerations."
     },
     {
       "name": "Computer Science and Engineering",
-      "description": "Develop tools that meet important societal challenges, such as intelligent vehicle control, climate simulations and smart energy supply.",
       "field": "Computer Science",
-      "keywords": ["computer science", "IT"]
+      "explanation": "Prepares students to build the digital technologies that power society. The program covers programming, algorithms, data science, artificial intelligence, and cybersecurity. It equips students with both theoretical and practical skills to design software systems, solve computational problems, and innovate in fields like fintech, healthtech, and robotics."
     },
     {
       "name": "Electrical Engineering",
-      "description": "Develop systems for health monitoring, reduce the risk of traffic accidents and much more. The rapid development of sensors in optical and wireless communication makes it possible.",
       "field": "Electrical Engineering",
-      "keywords": ["electrical engineering", "production", "product development"]
+      "explanation": "Covers the generation, transmission, and use of electrical energy and information. Students delve into embedded systems, power electronics, signal processing, and smart grids. The program emphasizes real-world applications, from renewable energy systems to communication networks and intelligent hardware design."
     },
     {
       "name": "Global Systems",
-      "description": "Tackle global sustainability challenges from a systems perspective and learn how these interact with society, technology and nature.",
       "field": "Engineering Physics, Engineering Mathematics and Global Systems",
-      "keywords": ["physics", "mathematics", "sustainability"]
+      "explanation": "Prepares students to tackle global challenges using systems thinking and analytical tools. The program focuses on climate systems, urban sustainability, and global governance through an engineering lens. Students develop models and strategies that consider complexity, uncertainty, and long-term impacts on people and the planet."
     },
     {
       "name": "Industrial Engineering and Management",
-      "description": "Practice finding connections and methods for analyzing technology and economics, with a focus on dynamics, technological development and innovation.",
       "field": "Industrial Engineering",
-      "keywords": ["economics", "business development", "project management"]
+      "explanation": "Bridges the gap between engineering and business. Students learn operations research, innovation management, logistics, and entrepreneurship. The program equips students to lead technical projects, manage organizations, and drive change in industries such as manufacturing, consulting, and tech."
     },
     {
       "name": "Information Technology",
-      "description": "Are you the next game developer, interaction designer or system architect? Develop tomorrow's secure software systems and design for future needs.",
       "field": "Information Technology",
-      "keywords": ["electrical engineering", "mathematics", "programming", "IT"]
+      "explanation": "Blends computing with communication and software development. Students work on building secure, scalable, and user-friendly systems that connect people and data. The program covers databases, web technologies, networking, and human-computer interaction, preparing students for careers in IT infrastructure, development, and consulting."
     },
     {
       "name": "Mechanical Engineering and Technical Design",
-      "description": "With your systems perspective, you contribute to sustainable solutions in areas such as transport and energy supply.",
       "field": "Mechanical Engineering and Technical Design",
-      "keywords": ["mechanical engineering", "production"]
+      "explanation": "Combines classical mechanical engineering with product development and innovation methods. Students design and prototype everything from engines and industrial tools to consumer gadgets. The program includes simulation, CAD, materials science, and manufacturing processes, preparing students to turn ideas into functional and elegant solutions."
     },
     {
       "name": "Medical Engineering",
-      "description": "Improve future health and save lives by developing advanced technology with the help of artificial intelligence, among other things.",
       "field": "Electrical Engineering",
-      "keywords": ["electrical engineering", "medical technology", "health", "AI"]
+      "explanation": "Applies engineering methods to healthcare challenges. Students learn to design medical devices, diagnostics, and digital health systems. The program combines electronics, physiology, signal analysis, and biomedical innovation, aiming to improve diagnosis, treatment, and patient care through smart technologies."
     },
     {
       "name": "Civil and Environmental Engineering",
-      "description": "Take on the entire process from planning and construction to completion of buildings, traffic routes and bridges.",
       "field": "Civil and Environmental Engineering",
-      "keywords": ["urban planning"]
+      "explanation": "Focuses on designing infrastructure and protecting natural resources. Students work on projects related to construction, water treatment, transportation systems, and climate resilience. The program emphasizes sustainable practices, urban planning, and engineering solutions for a growing and changing world."
     },
     {
       "name": "Technical Design",
-      "description": "With an understanding of human needs and technology's possibilities, you will develop sustainable solutions that are appealing and competitive.",
       "field": "Mechanical Engineering and Technical Design",
-      "keywords": ["design", "human-technology", "UX"]
+      "explanation": "Emphasizes creative product development rooted in technical expertise. Students are trained in design thinking, engineering mechanics, and prototyping. The program prepares students to bridge form and function—crafting products that are both technically robust and user-friendly, often working in interdisciplinary teams."
     },
     {
       "name": "Engineering Physics",
-      "description": "Design experiments and calculations to solve tomorrow's complex problems with a strong theoretical foundation in physics, mathematics and technology.",
       "field": "Engineering Physics, Engineering Mathematics and Global Systems",
-      "keywords": ["physics", "quantum", "space"]
+      "explanation": "Delivers a rigorous foundation in mathematics, physics, and computational modeling. Students study quantum mechanics, nanotechnology, and photonics, preparing them for research and advanced technology development. This program suits those with strong analytical abilities and curiosity about the fundamental laws of nature."
     },
     {
       "name": "Chemical Engineering",
-      "description": "In chemistry and chemical engineering, there are solutions for sustainable energy supply, clean drinking water and resource-efficient materials – we just need to ensure we have the knowledge and innovation capacity.",
       "field": "Chemical and Biotechnology",
-      "keywords": ["chemistry", "physics", "mathematics", "technology"]
+      "explanation": "Covers how to convert raw materials into useful products through chemical processes. Students study reaction engineering, thermodynamics, and process control. The program supports careers in energy, materials, food, and pharmaceuticals with a strong focus on sustainability and efficiency."
     },
     {
       "name": "Engineering Mathematics",
-      "description": "Work with development and analysis of tomorrow's mathematical and statistical models that are central to machine learning and artificial intelligence.",
       "field": "Engineering Physics, Engineering Mathematics and Global Systems",
-      "keywords": ["mathematics"]
+      "explanation": "Equips students to solve complex problems through mathematical modeling and simulation. Topics include optimization, machine learning, fluid dynamics, and systems control. The program is ideal for those who enjoy abstraction and want to apply mathematical tools in engineering, finance, or research."
     }
   ],
   "metadata": {

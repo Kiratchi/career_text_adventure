@@ -960,10 +960,9 @@
         
         function displayLLMCalls(llmCalls) {
             const container = document.getElementById('llm-calls-display');
-            
+
             let html = '';
-            
-            // Reverse the order to show most recent calls first
+
             [...llmCalls].reverse().forEach((call, index) => {
                 html += `
                     <div class="collapsible">
@@ -987,7 +986,7 @@
                                     </div>
                                     <div class="prompt-box">${call.prompt}</div>
                                 </div>
-                                
+
                                 <div class="llm-section">
                                     <div class="llm-section-header">
                                         <span>🤖 Raw Response</span>
@@ -997,19 +996,10 @@
                                 </div>
                             </div>
                         </div>
-                        
-                        <!-- Always visible parsed response -->
-                        <div style="padding: 20px; border-top: 1px solid #dee2e6; background: #f8f9fa;">
-                            <div class="llm-section-header" style="margin-bottom: 10px;">
-                                <span>🔍 Parsed Response</span>
-                                <span class="info-badge">Structured</span>
-                            </div>
-                            <div class="parsed-box">${formatParsedResponse(call.parsed_response)}</div>
-                        </div>
                     </div>
                 `;
             });
-            
+
             container.innerHTML = html || '<div>No LLM calls found</div>';
         }
         

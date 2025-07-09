@@ -13,6 +13,7 @@ from abc import ABC, abstractmethod
 from dotenv import load_dotenv
 import litellm
 from litellm import completion
+import random
 
 # ==================== CONFIGURATION ====================
 
@@ -52,8 +53,7 @@ PROMPT_CONFIG = {
 def initialize_llm():
     """Initialize LLM with available models"""
     models_to_try = [
-        "claude-haiku-3.5", "claude-sonnet-3.7", "gpt-4.1-2025-04-14",
-        "gpt-4.5-preview", "claude-sonnet-4", "o1"
+        "claude-haiku-3.5", "claude-sonnet-3.7", "gpt-4.1-2025-04-14"
     ]
     
     try:
@@ -628,10 +628,6 @@ class ProfileUpdateService:
     def _update_current_situation(self, profile: PlayerProfile, choice_context: Dict[str, Any]):
         """Update the current situation description"""
         try:
-            # Determine season based on year and choice count
-            choice_count = len(profile.life_choices)
-            seasons = ["Autumn semester", "Spring semester", "Summer break", "Winter break"]
-            current_season = seasons[choice_count % 4]
             
             prompt_content = load_prompt(
                 'update_current_situation',
@@ -639,7 +635,6 @@ class ProfileUpdateService:
                 year=profile.year,
                 program=profile.program,
                 choice_description=choice_context['choice_description'],
-                season=current_season
             )
             
             if prompt_content:
@@ -707,6 +702,108 @@ class DirectorTool(ABC):
             )
             
             raise
+
+class GetMastersProgramsTool(DirectorTool):
+    """Tool to get available master's programs for the student's bachelor program"""
+
+    @property
+    def name(self) -> str:
+        return "get_masters_programs"
+
+    @property
+    def description(self) -> str:
+        return "Get available master's programs for the student's bachelor program."
+
+    def execute(self, profile: PlayerProfile, **kwargs) -> Dict[str, Any]:
+        masters_data = knowledge.load_json('masters_programs.json')
+        all_programs = masters_data.get('masters_programs', [])
+
+        # Filter programs that are eligible for the student's bachelor program
+        available_programs = [
+            p for p in all_programs if profile.program in p.get('eligible_programs', [])
+        ]
+
+        # Optional difficulty filter
+        difficulty = kwargs.get('difficulty_level')
+        if difficulty:
+            available_programs = [
+                p for p in available_programs if p.get('difficulty', 'medium') == difficulty
+            ]
+
+        recommendations = self._generate_recommendations(profile, available_programs)
+
+        return {
+            "bachelor_program": profile.program,
+            "available_masters": available_programs,
+            "total_programs": len(available_programs),
+            "recommendations": recommendations,
+            "student_year": profile.year,
+            "ready_for_selection": profile.year >= 3
+        }
+
+    def _generate_recommendations(self, profile: PlayerProfile, programs: List[Dict]) -> List[Dict]:
+        choices_text = ' '.join(profile.life_choices).lower()
+        recommendations = []
+
+        for program in programs:
+            match_score = 0
+            reasons = []
+            program_name = program.get('name', '').lower()
+
+            for specialization in program.get('specializations', []):
+                if any(word in choices_text for word in specialization.lower().split() if len(word) > 3):
+                    match_score += 2
+                    reasons.append(f"Interest in {specialization.lower()}")
+                    break
+
+            for career in program.get('career_paths', []):
+                if any(word in choices_text for word in career.lower().split() if len(word) > 3):
+                    match_score += 1
+                    reasons.append(f"Aligns with {career.lower()} path")
+                    break
+
+            keyword_hits = sum(
+                1 for kw in ['robotics', 'software', 'ai', 'energy', 'entrepreneurship']
+                if kw in program_name and kw in choices_text
+            )
+            if keyword_hits:
+                match_score += 3
+                reasons.append("Relevant to your previous experiences")
+
+            # Academic focus
+            academic_signals = sum(
+                1 for word in ['academic', 'study', 'research', 'grade']
+                if any(word in choice.lower() for choice in profile.life_choices)
+            )
+            if program.get('difficulty') == 'high' and academic_signals >= 2:
+                match_score += 1
+                reasons.append("Good for strong academic profile")
+
+            # Practical focus
+            if program.get('difficulty') == 'low' and academic_signals == 0:
+                match_score += 1
+                reasons.append("Suited for hands-on focus")
+
+            # Leadership/industry experience
+            leadership = sum(
+                1 for word in ['leadership', 'team', 'organize', 'manage', 'social']
+                if any(word in choice.lower() for choice in profile.life_choices)
+            )
+            if leadership >= 2 and any(k in program_name for k in ['management', 'entrepreneurship']):
+                match_score += 2
+                reasons.append("Fits your leadership background")
+
+            if match_score > 0:
+                recommendations.append({
+                    "program": program,
+                    "match_score": match_score,
+                    "reasons": list(set(reasons)),
+                    "recommendation_level": "high" if match_score >= 5 else "medium" if match_score >= 3 else "low"
+                })
+
+        return sorted(recommendations, key=lambda x: x['match_score'], reverse=True)[:4]
+
+
 
 class GetCoursesTool(DirectorTool):
     """Tool to get available courses for a program"""
@@ -812,44 +909,24 @@ class GetCompaniesTool(DirectorTool):
         
         return relevant_companies
 
-class AnalyzeProgressTool(DirectorTool):
-    """Tool to analyze student's progress and suggest next steps"""
-    
-    @property
-    def name(self) -> str:
-        return "analyze_progress"
-    
-    @property
-    def description(self) -> str:
-        return "Analyze the student's progress, choices, and development to suggest appropriate next scenarios."
-    
-    def execute(self, profile: PlayerProfile, **kwargs) -> Dict[str, Any]:
-        num_choices = len(profile.life_choices)
+class GetProgramsExplanation:
+    """Helper to extract program explanations from programs.json"""
+
+    @staticmethod
+    def get_explanation(program_name: str) -> str:
+        try:
+            programs_data = knowledge.load_json('programs.json')
+            programs = programs_data.get('chalmers_engineering_programs', [])
+            
+            for program in programs:
+                if program.get('name') == program_name:
+                    return program.get('explanation', 'No explanation available.')
+            
+            return 'Program explanation not found.'
+        except Exception as e:
+            logger.warning(f"Error fetching program explanation for {program_name}: {e}")
+            return 'Program explanation not available.'
         
-        # Analyze choice patterns
-        choice_types = []
-        for choice in profile.life_choices:
-            if ':' in choice:
-                choice_type = choice.split(':')[0].strip()
-                choice_types.append(choice_type)
-        
-        # Determine what areas need attention
-        areas_covered = set(choice_types)
-        all_areas = {
-            'course_selection', 'study_approach', 'social_opportunities', 
-            'career_preparation', 'summer_plans', 'academic_focus'
-        }
-        
-        missing_areas = all_areas - areas_covered
-        
-        return {
-            "total_choices": num_choices,
-            "areas_covered": list(areas_covered),
-            "missing_areas": list(missing_areas),
-            "current_year": profile.year,
-            "personality": profile.personality_description,
-            "ready_for_advanced": num_choices >= 5
-        }
 
 class GetUniversitySystemTool(DirectorTool):
     """Tool to get Swedish university system information"""
@@ -910,6 +987,47 @@ class GetDegreeRequirementsTool(DirectorTool):
         
         return requirements
 
+class GetAcademicCalendarTool(DirectorTool):
+    """Tool to get academic calendar information"""
+    
+    @property
+    def name(self) -> str:
+        return "get_academic_calendar"
+    
+    @property
+    def description(self) -> str:
+        return "Get academic calendar information including exam periods, registration deadlines, holidays, and semester structure. Use for time-sensitive scenarios and academic planning."
+    
+    def execute(self, profile: PlayerProfile, **kwargs) -> Dict[str, Any]:
+        calendar = knowledge.load_json('academic_calendar.json')
+        
+        # If no file exists, provide typical Swedish academic calendar
+        if not calendar:
+            calendar = {
+                "current_period": "Autumn semester",
+                "upcoming_deadlines": [
+                    {"event": "Course registration", "date": "Early August", "importance": "high"},
+                    {"event": "First exam period", "date": "October", "importance": "medium"},
+                    {"event": "Winter break", "date": "December-January", "importance": "low"},
+                    {"event": "Final exams", "date": "January", "importance": "high"}
+                ],
+                "semester_structure": {
+                    "autumn": "September - January",
+                    "spring": "January - June",
+                    "summer": "June - August (optional courses)"
+                },
+                "important_periods": [
+                    "Registration: July-August",
+                    "Midterm exams: October/March", 
+                    "Final exams: January/May-June",
+                    "Thesis deadlines: May/October"
+                ]
+            }
+        
+        return calendar
+
+
+
 class GetCampusFacilitiesTool(DirectorTool):
     """Tool to get campus facilities information"""
     
@@ -955,45 +1073,6 @@ class GetCampusFacilitiesTool(DirectorTool):
             return {facility_type: facilities[facility_type]}
         
         return facilities
-
-class GetAcademicCalendarTool(DirectorTool):
-    """Tool to get academic calendar information"""
-    
-    @property
-    def name(self) -> str:
-        return "get_academic_calendar"
-    
-    @property
-    def description(self) -> str:
-        return "Get academic calendar information including exam periods, registration deadlines, holidays, and semester structure. Use for time-sensitive scenarios and academic planning."
-    
-    def execute(self, profile: PlayerProfile, **kwargs) -> Dict[str, Any]:
-        calendar = knowledge.load_json('academic_calendar.json')
-        
-        # If no file exists, provide typical Swedish academic calendar
-        if not calendar:
-            calendar = {
-                "current_period": "Autumn semester",
-                "upcoming_deadlines": [
-                    {"event": "Course registration", "date": "Early August", "importance": "high"},
-                    {"event": "First exam period", "date": "October", "importance": "medium"},
-                    {"event": "Winter break", "date": "December-January", "importance": "low"},
-                    {"event": "Final exams", "date": "January", "importance": "high"}
-                ],
-                "semester_structure": {
-                    "autumn": "September - January",
-                    "spring": "January - June",
-                    "summer": "June - August (optional courses)"
-                },
-                "important_periods": [
-                    "Registration: July-August",
-                    "Midterm exams: October/March", 
-                    "Final exams: January/May-June",
-                    "Thesis deadlines: May/October"
-                ]
-            }
-        
-        return calendar
 
 class GetStudyAbroadTool(DirectorTool):
     """Tool to get study abroad opportunities"""
@@ -1086,756 +1165,6 @@ class CheckPrerequisitesTool(DirectorTool):
         
         return prerequisites
 
-class GenerateGrowthOpportunityTool(DirectorTool):
-    """Tool to identify growth opportunities based on student's development gaps (no prewritten scenarios)"""
-    
-    @property
-    def name(self) -> str:
-        return "generate_growth_opportunity"
-    
-    @property
-    def description(self) -> str:
-        return "Analyze student's development gaps and suggest growth areas without prewritten scenarios. Use when student needs to develop specific skills."
-    
-    def execute(self, profile: PlayerProfile, **kwargs) -> Dict[str, Any]:
-        # Analyze student's development areas
-        choices = [choice.lower() for choice in profile.life_choices]
-        
-        areas_covered = {
-            'technical': any('technical' in choice or 'programming' in choice or 'engineering' in choice for choice in choices),
-            'social': any('social' in choice or 'club' in choice or 'team' in choice for choice in choices),
-            'leadership': any('leadership' in choice or 'lead' in choice or 'manage' in choice for choice in choices),
-            'creative': any('creative' in choice or 'design' in choice or 'innovation' in choice for choice in choices),
-            'academic': any('study' in choice or 'grade' in choice or 'research' in choice for choice in choices),
-            'professional': any('internship' in choice or 'career' in choice or 'company' in choice for choice in choices)
-        }
-        
-        # Find the least developed areas
-        missing_areas = [area for area, covered in areas_covered.items() if not covered]
-        
-        # Calculate development scores
-        development_scores = {}
-        for area, covered in areas_covered.items():
-            if covered:
-                # Count how many times this area appears
-                count = sum(1 for choice in choices if any(keyword in choice for keyword in self._get_keywords_for_area(area)))
-                development_scores[area] = count
-            else:
-                development_scores[area] = 0
-        
-        return {
-            "areas_covered": areas_covered,
-            "missing_areas": missing_areas,
-            "development_scores": development_scores,
-            "primary_growth_area": missing_areas[0] if missing_areas else min(development_scores, key=development_scores.get),
-            "difficulty": "moderate" if len(profile.life_choices) < 5 else "advanced",
-            "recommendation": f"Focus on {missing_areas[0] if missing_areas else 'advanced development in existing areas'}"
-        }
-    
-    def _get_keywords_for_area(self, area: str) -> List[str]:
-        """Get keywords that indicate development in an area"""
-        keywords = {
-            'technical': ['technical', 'programming', 'engineering', 'coding', 'software', 'development'],
-            'social': ['social', 'club', 'team', 'networking', 'collaboration', 'community'],
-            'leadership': ['leadership', 'lead', 'manage', 'organize', 'coordinate', 'responsibility'],
-            'creative': ['creative', 'design', 'innovation', 'artistic', 'project', 'build'],
-            'academic': ['study', 'grade', 'research', 'analysis', 'theoretical', 'academic'],
-            'professional': ['internship', 'career', 'company', 'business', 'professional', 'industry']
-        }
-        return keywords.get(area, [])
-
-class GetCurrentEventsTool(DirectorTool):
-    """Tool to get current events relevant to student's field"""
-    
-    @property
-    def name(self) -> str:
-        return "get_current_events"
-    
-    @property
-    def description(self) -> str:
-        return "Get current events, industry trends, or technological developments relevant to the student's field. Use to create scenarios about adapting to industry changes."
-    
-    def execute(self, profile: PlayerProfile, **kwargs) -> Dict[str, Any]:
-        # Load current events if available
-        events = knowledge.load_json('current_events.json')
-        
-        # If no file exists, generate program-relevant trends
-        if not events:
-            program_trends = {
-                "Computer Science and Engineering": [
-                    {"trend": "AI/ML Integration", "impact": "High demand for AI skills in all sectors", "relevance": "Critical for future career prospects"},
-                    {"trend": "Remote Work Culture", "impact": "Distributed teams becoming standard", "relevance": "Communication skills increasingly important"},
-                    {"trend": "Sustainability in Tech", "impact": "Green computing initiatives growing", "relevance": "Environmental awareness valued by employers"}
-                ],
-                "Mechanical Engineering": [
-                    {"trend": "Industry 4.0", "impact": "Smart manufacturing and IoT integration", "relevance": "Digital skills complement traditional engineering"},
-                    {"trend": "Sustainable Manufacturing", "impact": "Focus on eco-friendly processes", "relevance": "Environmental engineering skills in demand"},
-                    {"trend": "Automation Growth", "impact": "Robotics replacing manual processes", "relevance": "Programming and robotics skills valuable"}
-                ],
-                "Electrical Engineering": [
-                    {"trend": "Renewable Energy Transition", "impact": "Grid modernization and smart systems", "relevance": "Power systems and sustainability expertise crucial"},
-                    {"trend": "5G and Beyond", "impact": "Next-generation communication networks", "relevance": "RF and network engineering skills in demand"},
-                    {"trend": "IoT Expansion", "impact": "Connected devices everywhere", "relevance": "Embedded systems and security knowledge valuable"}
-                ]
-            }
-            events = {
-                "trends": program_trends.get(profile.program, []),
-                "program": profile.program,
-                "last_updated": "Current academic year"
-            }
-        
-        # Filter by relevance level if specified
-        relevance = kwargs.get('relevance')
-        if relevance and 'trends' in events:
-            filtered_trends = [trend for trend in events['trends'] if relevance.lower() in trend.get('relevance', '').lower()]
-            if filtered_trends:
-                events['trends'] = filtered_trends
-        
-        return events
-
-class GetMastersProgramsTool(DirectorTool):
-    """Tool to get available master's programs for the student's bachelor program"""
-    
-    @property
-    def name(self) -> str:
-        return "get_masters_programs"
-    
-    @property
-    def description(self) -> str:
-        return "Get available master's programs for the student's bachelor program. Use this when student is in year 3-4 and ready to choose their master's specialization."
-    
-    def execute(self, profile: PlayerProfile, **kwargs) -> Dict[str, Any]:
-        masters_data = knowledge.load_json('masters_programs.json')
-        
-        # Get all master's programs
-        all_programs = masters_data.get('masters_programs', [])
-        
-        # Filter programs that are eligible for the student's bachelor program
-        available_programs = []
-        for program in all_programs:
-            eligible_programs = program.get('eligible_programs', [])
-            if profile.program in eligible_programs:
-                available_programs.append(program)
-        
-        # Filter by difficulty if student's academic performance suggests it
-        difficulty_filter = kwargs.get('difficulty_level')
-        if difficulty_filter:
-            available_programs = [
-                program for program in available_programs 
-                if program.get('difficulty', 'medium') == difficulty_filter
-            ]
-        
-        # Add recommendation based on student's choices and interests
-        recommendations = self._generate_recommendations(profile, available_programs)
-        
-        return {
-            "bachelor_program": profile.program,
-            "available_masters": available_programs,
-            "total_programs": len(available_programs),
-            "recommendations": recommendations,
-            "student_year": profile.year,
-            "ready_for_selection": profile.year >= 3
-        }
-    
-    def _get_program_category(self, program_name: str) -> str:
-        """Categorize programs for better scenario matching using JSON data"""
-        try:
-            programs_data = knowledge.load_json('programs.json')
-            programs = programs_data.get('chalmers_engineering_programs', [])
-            
-            # Find the program in the JSON data
-            for program in programs:
-                if program.get('name') == program_name:
-                    field = program.get('field', '')
-                    
-                    # Categorize based on field
-                    if any(keyword in field.lower() for keyword in ['computer', 'information', 'automation', 'electrical']):
-                        return 'tech'
-                    elif any(keyword in field.lower() for keyword in ['mechanical', 'civil', 'chemical']):
-                        return 'engineering'
-                    elif any(keyword in field.lower() for keyword in ['architecture', 'design']):
-                        return 'design'
-                    elif any(keyword in field.lower() for keyword in ['physics', 'mathematics', 'global']):
-                        return 'science'
-                    elif any(keyword in field.lower() for keyword in ['biotechnology', 'medical']):
-                        return 'bio'
-                    else:
-                        return 'general'
-            
-            # Fallback to name-based categorization if not found in JSON
-            if any(keyword in program_name.lower() for keyword in ['computer', 'information', 'automation', 'electrical']):
-                return 'tech'
-            elif any(keyword in program_name.lower() for keyword in ['mechanical', 'civil', 'chemical']):
-                return 'engineering'
-            elif any(keyword in program_name.lower() for keyword in ['architecture', 'design']):
-                return 'design'
-            elif any(keyword in program_name.lower() for keyword in ['physics', 'mathematics', 'global']):
-                return 'science'
-            elif any(keyword in program_name.lower() for keyword in ['biotechnology', 'medical']):
-                return 'bio'
-            
-            return 'general'
-            
-        except Exception as e:
-            logger.warning(f"Error loading programs.json for categorization: {e}")
-            return 'general'
-    
-    def _get_technical_areas(self, program_name: str) -> List[str]:
-        """Get typical technical areas for a program using JSON data"""
-        try:
-            programs_data = knowledge.load_json('programs.json')
-            programs = programs_data.get('chalmers_engineering_programs', [])
-            
-            # Find the program in the JSON data
-            for program in programs:
-                if program.get('name') == program_name:
-                    keywords = program.get('keywords', [])
-                    field = program.get('field', '')
-                    
-                    # Generate technical areas based on keywords and field
-                    technical_areas = []
-                    
-                    # Add field-specific areas
-                    field_lower = field.lower()
-                    if 'computer' in field_lower or 'information' in field_lower:
-                        technical_areas.extend(['Software Development', 'Programming', 'System Design'])
-                    if 'automation' in field_lower or 'mechatronics' in field_lower:
-                        technical_areas.extend(['Robotics', 'Control Systems', 'Industrial Automation'])
-                    if 'electrical' in field_lower:
-                        technical_areas.extend(['Circuit Design', 'Signal Processing', 'Power Systems'])
-                    if 'mechanical' in field_lower:
-                        technical_areas.extend(['Machine Design', 'Manufacturing', 'Thermodynamics'])
-                    if 'architecture' in field_lower:
-                        technical_areas.extend(['CAD Design', 'Building Systems', 'Urban Planning'])
-                    if 'biotechnology' in field_lower or 'chemical' in field_lower:
-                        technical_areas.extend(['Lab Techniques', 'Process Engineering', 'Research Methods'])
-                    if 'physics' in field_lower:
-                        technical_areas.extend(['Theoretical Analysis', 'Experimental Design', 'Mathematical Modeling'])
-                    if 'civil' in field_lower or 'environmental' in field_lower:
-                        technical_areas.extend(['Structural Design', 'Environmental Systems', 'Project Management'])
-                    
-                    # Add keyword-based areas
-                    for keyword in keywords:
-                        keyword_lower = keyword.lower()
-                        if keyword_lower in ['ai', 'artificial intelligence', 'machine learning']:
-                            technical_areas.append('AI/ML')
-                        elif keyword_lower in ['robotics', 'robot']:
-                            technical_areas.append('Robotics')
-                        elif keyword_lower in ['programming', 'coding']:
-                            technical_areas.append('Software Development')
-                        elif keyword_lower in ['design', 'ux']:
-                            technical_areas.append('Design Thinking')
-                        elif keyword_lower in ['sustainability', 'environmental']:
-                            technical_areas.append('Sustainable Engineering')
-                        elif keyword_lower in ['health', 'medical']:
-                            technical_areas.append('Medical Technology')
-                    
-                    # Remove duplicates and return
-                    return list(set(technical_areas)) if technical_areas else ['General Engineering', 'Problem Solving']
-            
-            # Fallback if program not found
-            return ['General Engineering', 'Problem Solving']
-            
-        except Exception as e:
-            logger.warning(f"Error loading programs.json for technical areas: {e}")
-            return ['General Engineering', 'Problem Solving']
-
-    def _get_career_paths(self, program_name: str) -> List[str]:
-        """Get typical career paths for a program using JSON data"""
-        try:
-            programs_data = knowledge.load_json('programs.json')
-            programs = programs_data.get('chalmers_engineering_programs', [])
-            
-            # Find the program in the JSON data
-            for program in programs:
-                if program.get('name') == program_name:
-                    keywords = program.get('keywords', [])
-                    field = program.get('field', '')
-                    
-                    # Generate career paths based on keywords and field
-                    career_paths = []
-                    
-                    # Field-based career paths
-                    field_lower = field.lower()
-                    if 'computer' in field_lower or 'information' in field_lower:
-                        career_paths.extend(['Software Engineer', 'Data Scientist', 'Tech Lead', 'System Architect'])
-                    if 'automation' in field_lower or 'mechatronics' in field_lower:
-                        career_paths.extend(['Automation Engineer', 'Robotics Engineer', 'Control Systems Engineer'])
-                    if 'electrical' in field_lower:
-                        career_paths.extend(['Electrical Engineer', 'Electronics Designer', 'Power Systems Engineer'])
-                    if 'mechanical' in field_lower:
-                        career_paths.extend(['Mechanical Engineer', 'Product Designer', 'Manufacturing Engineer'])
-                    if 'architecture' in field_lower:
-                        career_paths.extend(['Architect', 'Urban Planner', 'Sustainability Consultant'])
-                    if 'biotechnology' in field_lower:
-                        career_paths.extend(['Biotech Researcher', 'Process Engineer', 'Quality Assurance Specialist'])
-                    if 'chemical' in field_lower:
-                        career_paths.extend(['Chemical Engineer', 'Process Engineer', 'Environmental Engineer'])
-                    if 'physics' in field_lower:
-                        career_paths.extend(['Research Scientist', 'Data Analyst', 'Technology Consultant'])
-                    if 'civil' in field_lower or 'environmental' in field_lower:
-                        career_paths.extend(['Civil Engineer', 'Environmental Consultant', 'Project Manager'])
-                    if 'mathematics' in field_lower:
-                        career_paths.extend(['Data Scientist', 'Financial Analyst', 'Research Scientist'])
-                    
-                    # Keyword-based career paths
-                    for keyword in keywords:
-                        keyword_lower = keyword.lower()
-                        if keyword_lower in ['ai', 'machine learning']:
-                            career_paths.append('AI Specialist')
-                        elif keyword_lower in ['robotics']:
-                            career_paths.append('Robotics Engineer')
-                        elif keyword_lower in ['health', 'medical']:
-                            career_paths.append('Medical Technology Specialist')
-                        elif keyword_lower in ['business', 'management']:
-                            career_paths.append('Engineering Manager')
-                        elif keyword_lower in ['sustainability']:
-                            career_paths.append('Sustainability Engineer')
-                        elif keyword_lower in ['design', 'ux']:
-                            career_paths.append('Design Engineer')
-                    
-                    # Remove duplicates and return
-                    return list(set(career_paths)) if career_paths else ['Engineer', 'Consultant', 'Researcher']
-            
-            # Fallback if program not found
-            return ['Engineer', 'Consultant', 'Researcher']
-            
-        except Exception as e:
-            logger.warning(f"Error loading programs.json for career paths: {e}")
-            return ['Engineer', 'Consultant', 'Researcher']
-
-    def _get_program_specializations(self, program_name: str) -> List[str]:
-        """Get program specializations from JSON data"""
-        try:
-            programs_data = knowledge.load_json('programs.json')
-            programs = programs_data.get('chalmers_engineering_programs', [])
-            
-            # Find the program in the JSON data
-            for program in programs:
-                if program.get('name') == program_name:
-                    keywords = program.get('keywords', [])
-                    field = program.get('field', '')
-                    
-                    # Create specializations based on keywords and field
-                    specializations = []
-                    
-                    # Use keywords as potential specializations
-                    for keyword in keywords:
-                        if len(keyword) > 3:  # Avoid very short keywords
-                            specializations.append(keyword.title())
-                    
-                    # Add field-based specializations
-                    if 'engineering' in field.lower():
-                        specializations.append('Advanced Engineering')
-                    if 'design' in field.lower():
-                        specializations.append('Design Innovation')
-                    if 'technology' in field.lower():
-                        specializations.append('Technology Development')
-                    
-                    return specializations[:5] if specializations else ['General Specialization']
-            
-            return ['General Specialization']
-            
-        except Exception as e:
-            logger.warning(f"Error loading programs.json for specializations: {e}")
-            return ['General Specialization']
-
-    def _get_industry_connections(self, program_name: str) -> List[str]:
-        """Get typical industry connections for a program"""
-        try:
-            programs_data = knowledge.load_json('programs.json')
-            programs = programs_data.get('chalmers_engineering_programs', [])
-            
-            # Find the program in the JSON data
-            for program in programs:
-                if program.get('name') == program_name:
-                    keywords = program.get('keywords', [])
-                    field = program.get('field', '')
-                    
-                    # Generate industry connections based on field and keywords
-                    industries = []
-                    
-                    field_lower = field.lower()
-                    if 'computer' in field_lower or 'information' in field_lower:
-                        industries.extend(['Tech Companies', 'Software Industry', 'Gaming Industry'])
-                    if 'automotive' in ' '.join(keywords).lower() or 'mechatronics' in field_lower:
-                        industries.extend(['Automotive Industry', 'Volvo', 'Manufacturing'])
-                    if 'electrical' in field_lower:
-                        industries.extend(['Electronics Industry', 'Ericsson', 'Energy Sector'])
-                    if 'architecture' in field_lower:
-                        industries.extend(['Architecture Firms', 'Construction', 'Urban Development'])
-                    if 'biotechnology' in field_lower or 'medical' in ' '.join(keywords).lower():
-                        industries.extend(['Pharmaceutical', 'Healthcare', 'Research Institutes'])
-                    if 'chemical' in field_lower:
-                        industries.extend(['Chemical Industry', 'Process Industry', 'Environmental'])
-                    
-                    return industries if industries else ['Technology Sector', 'Engineering Consultancy']
-            
-            return ['Technology Sector', 'Engineering Consultancy']
-            
-        except Exception as e:
-            logger.warning(f"Error loading programs.json for industry connections: {e}")
-            return ['Technology Sector', 'Engineering Consultancy']
-
-    def _generate_recommendations(self, profile: PlayerProfile, programs: List[Dict]) -> List[Dict]:
-        """Generate program recommendations based on student's journey"""
-        recommendations = []
-        
-        # Analyze student's choices for interests
-        choices_text = ' '.join(profile.life_choices).lower()
-        
-        # Get student's program category for cross-category recommendations
-        student_category = self._get_program_category(profile.program)
-        
-        for program in programs:
-            match_score = 0
-            reasons = []
-            
-            # Check for keyword matches in specializations and career paths
-            for specialization in program.get('specializations', []):
-                specialization_words = specialization.lower().split()
-                for word in specialization_words:
-                    if word in choices_text and len(word) > 3:  # Avoid short common words
-                        match_score += 2
-                        reasons.append(f"Matches your interest in {specialization.lower()}")
-                        break  # Only count each specialization once
-            
-            # Check career path alignment
-            for career in program.get('career_paths', []):
-                career_words = career.lower().split()
-                for word in career_words:
-                    if word in choices_text and len(word) > 3:
-                        match_score += 1
-                        reasons.append(f"Aligns with {career.lower()} career path")
-                        break  # Only count each career once
-            
-            # Check for specific program-related keywords
-            program_keywords = {
-                'robotics': ['robotics', 'robot', 'automation'],
-                'software': ['software', 'programming', 'coding', 'development'],
-                'automotive': ['automotive', 'vehicle', 'car', 'volvo'],
-                'energy': ['energy', 'power', 'renewable', 'sustainable'],
-                'ai': ['ai', 'artificial intelligence', 'machine learning', 'data'],
-                'control': ['control', 'mechatronics', 'systems'],
-                'entrepreneurship': ['startup', 'business', 'innovation', 'entrepreneur'],
-                'architecture': ['design', 'building', 'construction', 'urban'],
-                'biotech': ['biology', 'medical', 'health', 'pharmaceutical'],
-                'chemistry': ['chemical', 'materials', 'process', 'laboratory'],
-                'physics': ['physics', 'quantum', 'research', 'theoretical'],
-                'mathematics': ['mathematics', 'mathematical', 'statistics', 'modeling'],
-                'civil': ['infrastructure', 'construction', 'planning', 'environmental']
-            }
-            
-            program_name_lower = program['name'].lower()
-            for category, keywords in program_keywords.items():
-                if any(keyword in program_name_lower for keyword in keywords):
-                    if any(keyword in choices_text for keyword in keywords):
-                        match_score += 3
-                        reasons.append(f"Strong alignment with your {category} background")
-            
-            # NEW: Add category-based bonus for program alignment
-            program_category = self._get_program_category(program['name'])
-            if program_category == student_category:
-                match_score += 2
-                reasons.append(f"Natural progression within {student_category} field")
-            elif self._are_related_categories(student_category, program_category):
-                match_score += 1
-                reasons.append(f"Interesting cross-disciplinary opportunity ({student_category} + {program_category})")
-            
-            # Consider difficulty vs student's academic focus
-            academic_choices = sum(1 for choice in profile.life_choices if any(word in choice.lower() for word in ['academic', 'study', 'research', 'grade']))
-            if program.get('difficulty') == 'high' and academic_choices >= 2:
-                match_score += 1
-                reasons.append("Suits your strong academic focus")
-            elif program.get('difficulty') == 'low' and academic_choices < 1:
-                match_score += 1
-                reasons.append("Good entry point given your practical focus")
-            
-            # NEW: Bonus for industry experience alignment
-            industry_choices = sum(1 for choice in profile.life_choices if any(word in choice.lower() for word in ['internship', 'company', 'industry', 'work']))
-            if industry_choices >= 1:
-                industry_focused_programs = ['automotive', 'software', 'biotech', 'energy']
-                if any(keyword in program_name_lower for keyword in industry_focused_programs):
-                    match_score += 1
-                    reasons.append("Builds on your industry experience")
-            
-            # NEW: Social/leadership experience consideration
-            leadership_choices = sum(1 for choice in profile.life_choices if any(word in choice.lower() for word in ['leadership', 'team', 'organize', 'manage', 'social']))
-            management_programs = ['entrepreneurship', 'innovation', 'management']
-            if leadership_choices >= 2 and any(keyword in program_name_lower for keyword in management_programs):
-                match_score += 2
-                reasons.append("Perfect match for your leadership experience")
-            
-            # Only include programs with some level of match
-            if match_score > 0:
-                recommendations.append({
-                    "program": program,
-                    "match_score": match_score,
-                    "reasons": list(set(reasons)),  # Remove duplicates
-                    "recommendation_level": "high" if match_score >= 5 else "medium" if match_score >= 3 else "low",
-                    "student_category": student_category,
-                    "program_category": program_category
-                })
-        
-        # Sort by match score and return top recommendations
-        recommendations.sort(key=lambda x: x['match_score'], reverse=True)
-        return recommendations[:4]  # Top 4 recommendations
-
-    def _are_related_categories(self, cat1: str, cat2: str) -> bool:
-        """Check if two categories are related for cross-disciplinary recommendations"""
-        related_pairs = {
-            ('tech', 'engineering'): True,
-            ('science', 'tech'): True,
-            ('science', 'engineering'): True,
-            ('design', 'engineering'): True,
-            ('design', 'tech'): True,
-            ('bio', 'engineering'): True,
-            ('bio', 'science'): True,
-            ('tech', 'bio'): True  # For medical engineering, etc.
-        }
-        return related_pairs.get((cat1, cat2), False) or related_pairs.get((cat2, cat1), False)
-
-class CheckMastersReadinessTool(DirectorTool):
-    """Tool to check if student is ready for master's program selection"""
-    
-    @property
-    def name(self) -> str:
-        return "check_masters_readiness"
-    
-    @property
-    def description(self) -> str:
-        return "Check if student is ready to choose their master's program (year 3-4). Use to trigger master's selection scenarios."
-    
-    def execute(self, profile: PlayerProfile, **kwargs) -> Dict[str, Any]:
-        # Check if student is in the right year range
-        is_right_year = 3 <= profile.year <= 4
-        
-        # Check if they've already selected a master's program
-        has_selected_masters = any('master' in choice.lower() for choice in profile.life_choices)
-        
-        # Check if they have enough academic experience
-        academic_experience = sum(1 for choice in profile.life_choices if any(keyword in choice.lower() for keyword in ['course', 'study', 'academic', 'grade', 'research']))
-        sufficient_experience = academic_experience >= 2
-        
-        # Determine readiness status
-        ready_for_selection = (
-            is_right_year and 
-            not has_selected_masters and 
-            sufficient_experience
-        )
-        
-        # Determine urgency
-        urgency = "high" if profile.year == 4 and not has_selected_masters else "medium" if profile.year == 3 else "low"
-        
-        return {
-            "ready_for_masters_selection": ready_for_selection,
-            "current_year": profile.year,
-            "is_right_year": is_right_year,
-            "has_selected_masters": has_selected_masters,
-            "academic_experience": academic_experience,
-            "sufficient_experience": sufficient_experience,
-            "urgency": urgency,
-            "recommendation": self._get_readiness_recommendation(profile, ready_for_selection, urgency)
-        }
-    
-    def _get_readiness_recommendation(self, profile: PlayerProfile, ready: bool, urgency: str) -> str:
-        if ready and urgency == "high":
-            return "Student must choose master's program immediately - final year!"
-        elif ready and urgency == "medium":
-            return "Good time to explore master's program options"
-        elif profile.year < 3:
-            return "Too early for master's selection - focus on foundation"
-        elif any('master' in choice.lower() for choice in profile.life_choices):
-            return "Master's program already selected"
-        else:
-            return "Need more academic experience before master's selection"
-
-class PredictFuturePathsTool(DirectorTool):
-    """Tool to predict potential career paths based on current choices"""
-    
-    @property
-    def name(self) -> str:
-        return "predict_future_paths"
-    
-    @property
-    def description(self) -> str:
-        return "Analyze student's choices to predict potential career paths and suggest preparation steps. Use for long-term career planning scenarios."
-    
-    def execute(self, profile: PlayerProfile, **kwargs) -> Dict[str, Any]:
-        # Analyze choice patterns
-        choices = [choice.lower() for choice in profile.life_choices]
-        
-        # Define career indicators
-        career_indicators = {
-            'software_engineer': ['programming', 'technical', 'coding', 'software', 'development'],
-            'research_scientist': ['research', 'academic', 'theoretical', 'analysis', 'study'],
-            'product_manager': ['leadership', 'management', 'social', 'organization', 'team'],
-            'entrepreneur': ['innovation', 'creative', 'startup', 'business', 'independent'],
-            'consultant': ['problem-solving', 'analysis', 'communication', 'client', 'advisory'],
-            'engineering_manager': ['leadership', 'technical', 'team', 'project', 'management']
-        }
-        
-        # Calculate career fit scores
-        career_scores = {}
-        for career, indicators in career_indicators.items():
-            score = sum(1 for choice in choices for indicator in indicators if indicator in choice)
-            if score > 0:
-                career_scores[career] = score
-        
-        # Sort by likelihood
-        sorted_careers = sorted(career_scores.items(), key=lambda x: x[1], reverse=True)
-        
-        # Generate predictions
-        predictions = {
-            "top_career_paths": [],
-            "preparation_suggestions": [],
-            "skills_to_develop": [],
-            "experience_needed": []
-        }
-        
-        for career, score in sorted_careers[:3]:  # Top 3 careers
-            career_info = {
-                "career": career.replace('_', ' ').title(),
-                "likelihood": "high" if score >= 3 else "medium" if score >= 2 else "low",
-                "match_score": score
-            }
-            predictions["top_career_paths"].append(career_info)
-        
-        # Add preparation suggestions based on top career
-        if sorted_careers:
-            top_career = sorted_careers[0][0]
-            
-            career_prep = {
-                'software_engineer': {
-                    'skills': ['Advanced programming', 'Software architecture', 'Testing methodologies'],
-                    'experience': ['Open source contributions', 'Internships at tech companies', 'Personal projects'],
-                    'suggestions': ['Build a strong GitHub portfolio', 'Learn multiple programming languages', 'Practice coding interviews']
-                },
-                'research_scientist': {
-                    'skills': ['Research methodology', 'Data analysis', 'Academic writing'],
-                    'experience': ['Research assistant positions', 'Conference presentations', 'Publication attempts'],
-                    'suggestions': ['Consider PhD programs', 'Collaborate with professors', 'Join research groups']
-                },
-                'product_manager': {
-                    'skills': ['Product strategy', 'User research', 'Data analysis'],
-                    'experience': ['Product internships', 'Leadership roles', 'Cross-functional projects'],
-                    'suggestions': ['Develop business acumen', 'Learn about user experience', 'Practice stakeholder management']
-                }
-            }
-            
-            if top_career in career_prep:
-                prep_info = career_prep[top_career]
-                predictions["skills_to_develop"] = prep_info['skills']
-                predictions["experience_needed"] = prep_info['experience']
-                predictions["preparation_suggestions"] = prep_info['suggestions']
-        
-        return predictions
-
-class GetHistoryContextTool(DirectorTool):
-    """Tool to get comprehensive history and avoid repetitive scenarios"""
-    
-    @property
-    def name(self) -> str:
-        return "get_history_context"
-    
-    @property
-    def description(self) -> str:
-        return "Get comprehensive history of student's journey to understand what they've already done and avoid repetitive scenarios. ALWAYS use this tool when creating scenarios."
-    
-    def execute(self, profile: PlayerProfile, **kwargs) -> Dict[str, Any]:
-        # Analyze what student has already done from history and choices
-        all_choices_text = ' '.join(profile.life_choices).lower()
-        history_text = profile.comprehensive_history.lower()
-        combined_text = f"{all_choices_text} {history_text}"
-        
-        # Extract activities already done
-        activities_done = []
-        organizations_mentioned = []
-        courses_mentioned = []
-        companies_mentioned = []
-        
-        # Organizations
-        org_keywords = ['robotics team', 'student union', 'ieee', 'engineering society', 'chalmers robotics', 'robotics club']
-        for keyword in org_keywords:
-            if keyword in combined_text:
-                organizations_mentioned.append(keyword)
-                activities_done.append(f"joined {keyword}")
-        
-        # Courses
-        course_keywords = ['robotics fundamentals', 'vehicle dynamics', 'data structures', 'algorithms', 'mechanics', 'programming', 'machine learning']
-        for keyword in course_keywords:
-            if keyword in combined_text and ('course' in combined_text or 'enroll' in combined_text):
-                courses_mentioned.append(keyword)
-                activities_done.append(f"took {keyword} course")
-        
-        # Companies
-        company_keywords = ['volvo', 'ericsson', 'saab', 'spotify', 'klarna', 'google', 'microsoft']
-        for keyword in company_keywords:
-            if keyword in combined_text and ('apply' in combined_text or 'internship' in combined_text):
-                companies_mentioned.append(keyword)
-                activities_done.append(f"applied to {keyword}")
-        
-        # Analyze scenario frequency
-        scenario_frequency = {}
-        for choice in profile.life_choices:
-            if ':' in choice:
-                scenario_type = choice.split(':')[0].strip()
-                scenario_frequency[scenario_type] = scenario_frequency.get(scenario_type, 0) + 1
-        
-        # Get recent scenario patterns
-        recent_scenarios = profile.get_recent_scenario_types(5)
-        
-        # Generate repetition warnings
-        repetition_warnings = []
-        
-        # Check for immediate repetition
-        if len(recent_scenarios) >= 2 and recent_scenarios[-1] == recent_scenarios[-2]:
-            repetition_warnings.append(f"Just repeated '{recent_scenarios[-1]}' scenario - avoid similar")
-        
-        # Check for overused scenarios
-        for scenario_type, count in scenario_frequency.items():
-            if count >= 3:
-                repetition_warnings.append(f"Overused '{scenario_type}' scenario ({count} times) - try different themes")
-        
-        # Check for repeated organizations
-        if len(organizations_mentioned) > 1:
-            repetition_warnings.append(f"Already joined organizations: {', '.join(organizations_mentioned)} - try new activities")
-        
-        return {
-            "total_choices": len(profile.life_choices),
-            "current_year": profile.year,
-            "comprehensive_history": profile.comprehensive_history,
-            "activities_already_done": activities_done,
-            "organizations_joined": organizations_mentioned,
-            "courses_taken": courses_mentioned,
-            "companies_applied": companies_mentioned,
-            "scenario_frequency": scenario_frequency,
-            "recent_scenario_pattern": recent_scenarios,
-            "repetition_warnings": repetition_warnings,
-            "variety_suggestions": self._get_variety_suggestions(profile, activities_done)
-        }
-    
-    def _get_variety_suggestions(self, profile: PlayerProfile, activities_done: List[str]) -> List[str]:
-        """Suggest areas for variety based on what hasn't been done"""
-        suggestions = []
-        
-        # Check what areas are missing
-        if not any('social' in activity for activity in activities_done):
-            suggestions.append("Try social activities or networking events")
-        
-        if not any('research' in activity for activity in activities_done):
-            suggestions.append("Consider research opportunities or academic projects")
-        
-        if not any('international' in activity for activity in activities_done):
-            suggestions.append("Explore international opportunities or exchange programs")
-        
-        if not any('startup' in activity or 'entrepreneur' in activity for activity in activities_done):
-            suggestions.append("Consider entrepreneurship or startup activities")
-        
-        if profile.year >= 3 and not any('thesis' in activity for activity in activities_done):
-            suggestions.append("Start thinking about thesis projects")
-        
-        return suggestions
 
 # ==================== GAME DIRECTOR ====================
 
@@ -1854,38 +1183,13 @@ class GameDirector:
             'get_campus_facilities': GetCampusFacilitiesTool(),
             'get_academic_calendar': GetAcademicCalendarTool(),
             'get_study_abroad': GetStudyAbroadTool(),
-            'get_current_events': GetCurrentEventsTool(),
             
             # Master's program selection tools
             'get_masters_programs': GetMastersProgramsTool(),
-            'check_masters_readiness': CheckMastersReadinessTool(),
             
             # Analysis and decision support tools
-            'analyze_progress': AnalyzeProgressTool(),
             'check_prerequisites': CheckPrerequisitesTool(),
-            'predict_future_paths': PredictFuturePathsTool(),
-            'get_history_context': GetHistoryContextTool()
         }
-
-    def _get_program_category(self, program_name: str) -> str:
-        """Categorize programs for better scenario matching using JSON data"""
-        return self.tools['get_masters_programs']._get_program_category(program_name)
-
-    def _get_technical_areas(self, program_name: str) -> List[str]:
-        """Get typical technical areas for a program using JSON data"""
-        return self.tools['get_masters_programs']._get_technical_areas(program_name)
-
-    def _get_career_paths(self, program_name: str) -> List[str]:
-        """Get typical career paths for a program using JSON data"""
-        return self.tools['get_masters_programs']._get_career_paths(program_name)
-
-    def _get_program_specializations(self, program_name: str) -> List[str]:
-        """Get program specializations from JSON data"""
-        return self.tools['get_masters_programs']._get_program_specializations(program_name)
-
-    def _get_industry_connections(self, program_name: str) -> List[str]:
-        """Get typical industry connections for a program"""
-        return self.tools['get_masters_programs']._get_industry_connections(program_name)
 
     def _get_tool_descriptions(self) -> str:
         """Get descriptions of all available tools"""
@@ -1941,6 +1245,83 @@ class GameDirector:
             logger.error(f"Error executing tool {tool_name}: {e}")
             return {"error": str(e)}
 
+    def _make_llm_call_with_retry(self, messages: List[Dict], call_type: str, prompt_name: str, max_retries: int = 3) -> str:
+        """Make LLM call with retry logic"""
+        
+        for attempt in range(max_retries):
+            try:
+                logger.info(f"🤖 LLM CALL ATTEMPT {attempt + 1}/{max_retries} ({call_type})")
+                
+                response = make_llm_call(messages, call_type=call_type, prompt_name=prompt_name)
+                
+                # Basic validation - check if response is not empty and seems reasonable
+                if not response or len(response.strip()) < 10:
+                    raise ValueError(f"LLM response too short or empty: {len(response)} characters")
+                
+                logger.info(f"🤖 LLM CALL SUCCESS on attempt {attempt + 1}")
+                return response
+                
+            except Exception as e:
+                logger.warning(f"🤖 LLM CALL FAILED (attempt {attempt + 1}): {e}")
+                
+                # If this was the last attempt, we'll fall through to return None
+                if attempt == max_retries - 1:
+                    logger.error(f"🤖 LLM CALL FAILED after {max_retries} attempts")
+                    break
+                
+                # Wait a bit before retrying (exponential backoff)
+                wait_time = 0.5 * (2 ** attempt)
+                logger.info(f"🤖 Waiting {wait_time}s before retry...")
+                time.sleep(wait_time)
+        
+        return None
+
+    def _create_ai_crash_fallback(self, profile: PlayerProfile) -> Dict[str, Any]:
+        """Create a humorous fallback when the AI has completely crashed"""
+        
+        crash_situations = [
+            f"The AI Director has blue-screened while trying to figure out what {profile.name} should do next. In the confusion, three random choices have appeared:",
+            f"ERROR 404: Plot not found. The AI Director is currently stuck in an infinite loop thinking about {profile.name}'s future. Please choose from these emergency backup options:",
+            f"The AI Director has gone for a coffee break after encountering a 'critical thinking error'. While we wait for it to return, here are some placeholder choices:",
+            f"SYSTEM MALFUNCTION: The AI Director tried to process {profile.name}'s complex personality and promptly gave up. These generic choices have been auto-generated instead:",
+            f"The AI Director is experiencing technical difficulties (probably tried to divide by zero while calculating {profile.name}'s future). Emergency choices activated:",
+            f"🚨 EMERGENCY PROTOCOL ACTIVATED 🚨 The AI Director has crashed spectacularly while analyzing {profile.name}'s situation. Manual override engaged:",
+            f"The AI Director attempted to understand {profile.name}'s life choices and immediately filed for early retirement. Backup choices loading..."
+        ]
+        
+        crash_options = [
+            {
+                "id": "choice_1_crash",
+                "description": "Choose Option 1 (The AI doesn't know what this does)",
+                "character_implication": "somehow affects your character in mysterious ways"
+            },
+            {
+                "id": "choice_2_crash", 
+                "description": "Choose Option 2 (This might be related to your studies? Maybe?)",
+                "character_implication": "does something vaguely academic-sounding"
+            },
+            {
+                "id": "choice_3_crash",
+                "description": "Choose Option 3 (The AI is just guessing at this point)",
+                "character_implication": "results in unpredictable character development"
+            },
+            {
+                "id": "reboot_ai",
+                "description": "Try to reboot the AI Director (50% chance of success, 50% chance of making things worse)",
+                "character_implication": "either fixes the AI or causes even more chaos"
+            }
+        ]
+        
+        # Pick a random crash situation
+        situation = random.choice(crash_situations)
+        
+        return {
+            "type": "ai_crash",
+            "title": "🤖 AI DIRECTOR MALFUNCTION 🤖",
+            "situation": situation,
+            "options": crash_options
+        }
+
     def should_trigger_masters_selection(self, profile: PlayerProfile) -> bool:
         """Check if we should trigger master's program selection when transitioning 3->4"""
         # Only trigger when student is exactly in year 3 and about to advance to year 4
@@ -1970,7 +1351,7 @@ class GameDirector:
         recommendations = programs_data.get('recommendations', [])
         
         if not available_programs:
-            return self._create_fallback_scenario(profile)
+            return self._create_ai_crash_fallback(profile)
         
         # Create urgency text
         urgency_text = "It's time to choose your master's program!" if profile.year == 4 else "You need to select your master's specialization before advancing to Year 4."
@@ -2022,12 +1403,12 @@ class GameDirector:
         }
 
     def decide_next_scenario(self, profile: PlayerProfile) -> Dict[str, Any]:
-        """Enhanced scenario decision with full debugging and recursion prevention"""
+        """Simplified scenario decision using pre-processed profile summaries"""
         
         # Add recursion prevention
         if hasattr(self, '_generating_scenario') and self._generating_scenario:
             logger.warning("🎬 RECURSION DETECTED: Already generating scenario, returning fallback")
-            return self._create_fallback_scenario(profile)
+            return self._create_ai_crash_fallback(profile)
         
         self._generating_scenario = True
         
@@ -2065,51 +1446,50 @@ class GameDirector:
             
             if not self.llm:
                 logger.warning("🎬 DIRECTOR: LLM not available, using fallback")
-                fallback_scenario = self._create_fallback_scenario(profile)
+                fallback_scenario = self._create_ai_crash_fallback(profile)
                 debug_logger.complete_scenario_generation(fallback_scenario, False, error="LLM not available")
                 return fallback_scenario
-            
+
             start_time = time.time()
             
-            # ALWAYS use history context to understand what student has done
-            logger.info("🎬 PHASE 1: Getting history context to avoid repetition...")
-            history_context = self._execute_tool('get_history_context', profile)
-            
-            # Enhanced analysis prompt using simple prompt loading
-            logger.info("🎬 PHASE 2: Loading director analysis prompt...")
+            # PHASE 1: Load director analysis prompt using pre-processed summaries
+            logger.info("🎬 PHASE 1: Loading director analysis prompt with profile summaries...")
             prompt_content = load_prompt(
                 'director_analysis',
-                student_summary=profile.get_character_summary(),
+                student_name=profile.name,
                 program=profile.program,
-                program_category=self._get_program_category(profile.program),
-                program_specializations=', '.join(self._get_program_specializations(profile.program)),
-                activities_done=', '.join(history_context.get('activities_already_done', [])),
-                organizations_joined=', '.join(history_context.get('organizations_joined', [])),
-                courses_taken=', '.join(history_context.get('courses_taken', [])),
-                companies_applied=', '.join(history_context.get('companies_applied', [])),
-                repetition_warnings='\n'.join(history_context.get('repetition_warnings', ['No repetition concerns'])),
-                variety_suggestions='\n'.join(history_context.get('variety_suggestions', ['Continue current path'])),
+                year=profile.year,
+                program_explanation=GetProgramsExplanation.get_explanation(profile.program),
+                comprehensive_history=profile.comprehensive_history or "This is their first significant decision at university.",
+                personality_summary=profile.personality_summary or profile.personality_description,
                 tool_descriptions=self._get_tool_descriptions()
             )
             
             if not prompt_content:
-                logger.error("🎬 PHASE 2: Director analysis prompt failed to load!")
-                fallback_scenario = self._create_fallback_scenario(profile)
+                logger.error("🎬 PHASE 1: Director analysis prompt failed to load!")
+                fallback_scenario = self._create_ai_crash_fallback(profile)
                 debug_logger.complete_scenario_generation(fallback_scenario, False, error="Director analysis prompt failed")
                 return fallback_scenario
             
-            logger.info(f"🎬 PHASE 2: Prompt loaded successfully ({len(prompt_content)} chars)")
+            logger.info(f"🎬 PHASE 1: Prompt loaded successfully ({len(prompt_content)} chars)")
             
-            # Get AI's analysis and tool plan
-            logger.info("🎬 PHASE 3: Getting AI analysis...")
+            # PHASE 2: Get AI analysis with retry
+            logger.info("🎬 PHASE 2: Getting AI analysis with retry logic...")
             messages = [{"role": "user", "content": prompt_content}]
-            response = make_llm_call(
+            response = self._make_llm_call_with_retry(
                 messages, 
                 call_type="director_analysis",
                 prompt_name="director_analysis"
             )
             
-            logger.info(f"🎬 PHASE 3: AI analysis received ({len(response)} chars)")
+            # Check if LLM call failed after all retries
+            if response is None:
+                logger.error("🎬 PHASE 2: AI analysis failed after all retries")
+                fallback_scenario = self._create_ai_crash_fallback(profile)
+                debug_logger.complete_scenario_generation(fallback_scenario, False, error="AI analysis failed after retries")
+                return fallback_scenario
+            
+            logger.info(f"🎬 PHASE 2: AI analysis received ({len(response)} chars)")
             
             # Parse the response
             analysis = self._parse_director_response(response)
@@ -2119,10 +1499,9 @@ class GameDirector:
             logger.info(f"   Scenario Type: {analysis.get('scenario_type', 'unknown')}")
             logger.info(f"   Tools Planned: {len(analysis.get('tools_to_use', []))} tools")
             
-            # Execute the tools the AI requested
-            logger.info("🎬 PHASE 4: Executing requested tools...")
+            # PHASE 3: Execute the tools the AI requested
+            logger.info("🎬 PHASE 3: Executing requested tools...")
             tool_results = {}
-            tool_results['history_context'] = history_context
             
             for i, tool_call in enumerate(analysis.get('tools_to_use', []), 1):
                 logger.info(f"🎬 TOOL {i}/{len(analysis.get('tools_to_use', []))}: {tool_call}")
@@ -2132,10 +1511,10 @@ class GameDirector:
                 else:
                     logger.warning(f"   → Could not parse tool call: {tool_call}")
             
-            logger.info(f"🎬 PHASE 5: Creating scenario with {len(tool_results)} tool results...")
+            logger.info(f"🎬 PHASE 4: Creating scenario with {len(tool_results)} tool results...")
             
-            # Create the actual scenario
-            scenario = self._create_scenario_with_context(
+            # PHASE 4: Create the actual scenario with retry
+            scenario = self._create_scenario_with_context_retry(
                 profile, 
                 analysis.get('scenario_type', 'general'),
                 analysis.get('analysis', ''),
@@ -2168,16 +1547,16 @@ class GameDirector:
             logger.error(f"🎬 DIRECTOR ERROR: {e}")
             import traceback
             logger.error(f"🎬 DIRECTOR TRACEBACK: {traceback.format_exc()}")
-            return self._create_fallback_scenario(profile)
+            return self._create_ai_crash_fallback(profile)
         
         finally:
             # Always clear the recursion flag
             self._generating_scenario = False
 
-    def _create_scenario_with_context(self, profile: PlayerProfile, scenario_type: str, analysis: str, tool_results: Dict[str, Any]) -> Dict[str, Any]:
-        """Create the final scenario using AI with context from tools and history awareness"""
+    def _create_scenario_with_context_retry(self, profile: PlayerProfile, scenario_type: str, analysis: str, tool_results: Dict[str, Any]) -> Dict[str, Any]:
+        """Create the final scenario using AI with context from tools and history awareness WITH RETRY"""
         
-        logger.info("🎬 PHASE 5: Creating final scenario with AI...")
+        logger.info("🎬 PHASE 5: Creating final scenario with AI and retry logic...")
         logger.info(f"   Scenario type: {scenario_type}")
         logger.info(f"   Using context from {len(tool_results)} tools")
         
@@ -2191,11 +1570,11 @@ class GameDirector:
             prompt_content = load_prompt(
                 'scenario_creation',
                 student_name=profile.name,
-                student_summary=profile.get_character_summary(),
                 program=profile.program,
-                technical_areas=', '.join(self._get_technical_areas(profile.program)),
-                career_paths=', '.join(self._get_career_paths(profile.program)),
-                industry_connections=', '.join(self._get_industry_connections(profile.program)),
+                year=profile.year,
+                program_explanation=GetProgramsExplanation.get_explanation(profile.program),
+                comprehensive_history=profile.comprehensive_history or "This is their first significant decision at university.",
+                personality_summary=profile.personality_summary or profile.personality_description,
                 analysis=analysis,
                 scenario_type=scenario_type,
                 activities_done=', '.join(history_context.get('activities_already_done', [])),
@@ -2211,17 +1590,23 @@ class GameDirector:
             logger.info(f"🎬 PROMPT LOADED: {len(prompt_content)} characters")
             if not prompt_content:
                 logger.error("🎬 ERROR: Prompt content is empty!")
-                return self._create_fallback_scenario(profile)
+                return self._create_ai_crash_fallback(profile)
             
             # Log first 200 chars of prompt for debugging
             logger.info(f"🎬 PROMPT PREVIEW: {prompt_content[:200]}...")
             
+            # Make LLM call with retry
             messages = [{"role": "user", "content": prompt_content}]
-            response = make_llm_call(
+            response = self._make_llm_call_with_retry(
                 messages, 
                 call_type="scenario_creation",
                 prompt_name="scenario_creation"
             )
+            
+            # Check if LLM call failed after all retries
+            if response is None:
+                logger.error("🎬 SCENARIO CREATION: AI failed after all retries")
+                return self._create_ai_crash_fallback(profile)
             
             # ADD DEBUG LOGGING
             logger.info(f"🎬 AI RESPONSE: {len(response)} characters")
@@ -2236,6 +1621,7 @@ class GameDirector:
             else:
                 logger.error("🎬 ERROR: Scenario parsing failed or no options found")
                 logger.error(f"🎬 PARSED SCENARIO: {scenario}")
+                return self._create_ai_crash_fallback(profile)
             
             logger.info("🎬 SCENARIO GENERATED:")
             logger.info(f"   Title: {scenario.get('title', 'Unknown')}")
@@ -2248,110 +1634,114 @@ class GameDirector:
             logger.error(f"🎬 Exception type: {type(e)}")
             import traceback
             logger.error(f"🎬 Full traceback: {traceback.format_exc()}")
-            return self._create_fallback_scenario(profile)
-
-    def _create_fallback_scenario(self, profile: PlayerProfile) -> Dict[str, Any]:
-        """Create a simple fallback scenario using prompt manager"""
-        try:
-            prompt_content = load_prompt(
-                'simple_scenario',
-                student_name=profile.name,
-                program=profile.program,
-                year=profile.year,
-                context=profile.current_situation
-            )
-            
-            if prompt_content:
-                messages = [{"role": "user", "content": prompt_content}]
-                response = make_llm_call(
-                    messages, 
-                    call_type="fallback_scenario",
-                    prompt_name="simple_scenario"
-                )
-                
-                # Try to parse the response
-                scenario = self._parse_scenario_json(response)
-                if scenario.get('options'):
-                    return scenario
-        
-        except Exception as e:
-            logger.error(f"Error creating fallback scenario: {e}")
-        
-        # Ultimate fallback - hardcoded scenario
-        return {
-            "type": "life_choice",
-            "title": "Academic Decision",
-            "situation": f"{profile.name} needs to make an important decision about their studies.",
-            "options": [
-                {
-                    "id": "focus_grades",
-                    "description": "Focus on getting the best grades possible",
-                    "character_implication": "becomes more grade-focused"
-                },
-                {
-                    "id": "balance_life",
-                    "description": "Balance studies with extracurricular activities",
-                    "character_implication": "develops a well-rounded approach"
-                },
-                {
-                    "id": "deepen_knowledge",
-                    "description": "Prioritize learning and understanding over grades",
-                    "character_implication": "becomes more knowledge-focused"
-                }
-            ]
-        }
+            return self._create_ai_crash_fallback(profile)
 
     def _summarize_tool_results(self, tool_results: Dict[str, Any]) -> str:
-        """Summarize tool results for context, including history awareness"""
+        """Summarize tool results for scenario prompt context"""
         summary_parts = []
-        
-        # Include history context first
-        if 'history_context' in tool_results:
-            history = tool_results['history_context']
+
+        # History context first
+        history = tool_results.get('history_context', {})
+        if history:
             if history.get('activities_already_done'):
-                summary_parts.append("STUDENT HAS ALREADY DONE:")
-                for activity in history.get('activities_already_done', []):
-                    summary_parts.append(f"  ❌ {activity}")
-            
+                summary_parts.append("PREVIOUS ACTIVITIES:")
+                for activity in history['activities_already_done']:
+                    summary_parts.append(f"- {activity}")
+
             if history.get('variety_suggestions'):
-                summary_parts.append("SUGGESTED NEW AREAS TO EXPLORE:")
-                for suggestion in history.get('variety_suggestions', []):
-                    summary_parts.append(f"  ✅ {suggestion}")
-            
-            summary_parts.append("")  # Add spacing
-        
-        # Then include other tool results
+                summary_parts.append("SUGGESTED NEW AREAS:")
+                for suggestion in history['variety_suggestions']:
+                    summary_parts.append(f"- {suggestion}")
+
+            summary_parts.append("")  # spacing
+
+        # Tool results
         for tool_name, result in tool_results.items():
             if tool_name == 'history_context' or 'error' in result:
                 continue
-            
+
             if tool_name == 'get_courses':
                 electives = result.get('electives', [])
                 if electives:
-                    summary_parts.append(f"Available NEW courses: {', '.join(electives[:4])}")
-            
+                    summary_parts.append("AVAILABLE COURSES:")
+                    for course in electives[:5]:
+                        summary_parts.append(f"- {course}")
+
             elif tool_name == 'get_organizations':
-                summary_parts.append("Student organizations (try NEW ones):")
+                summary_parts.append("STUDENT ORGANIZATIONS:")
                 for category, orgs in result.items():
                     if isinstance(orgs, list):
-                        for org in orgs[:2]:  # Limit to avoid too much context
+                        for org in orgs[:2]:
                             if isinstance(org, dict):
-                                summary_parts.append(f"- {org.get('name', 'Unknown')}: {org.get('description', '')}")
-            
+                                name = org.get('name', 'Unknown')
+                                desc = org.get('description', '')
+                                summary_parts.append(f"- {name}: {desc}")
+
             elif tool_name == 'get_companies':
-                summary_parts.append("Companies offering opportunities (try NEW ones):")
+                summary_parts.append("INTERNSHIPS AND CAREER OPPORTUNITIES:")
                 for industry, companies in result.items():
                     if isinstance(companies, list):
                         for company in companies[:2]:
                             if isinstance(company, dict):
-                                opportunities = ', '.join(company.get('opportunities', [])[:2])
-                                summary_parts.append(f"- {company.get('name', 'Unknown')}: {opportunities}")
-            
+                                name = company.get('name', 'Unknown')
+                                roles = ', '.join(company.get('opportunities', [])[:2])
+                                summary_parts.append(f"- {name}: {roles}")
+
             elif tool_name == 'analyze_progress':
                 missing_areas = result.get('missing_areas', [])
                 if missing_areas:
-                    summary_parts.append(f"Unexplored areas (GOOD for new scenarios): {', '.join(missing_areas)}")
-        
+                    summary_parts.append("UNEXPLORED AREAS:")
+                    for area in missing_areas:
+                        summary_parts.append(f"- {area}")
+
+            elif tool_name == 'get_study_abroad':
+                destinations = result.get('destinations', [])
+                if destinations:
+                    summary_parts.append("STUDY ABROAD OPPORTUNITIES:")
+                    for d in destinations[:3]:
+                        country = d.get('country', 'Unknown')
+                        programs = ', '.join(d.get('programs', [])[:2])
+                        summary_parts.append(f"- {country}: {programs}")
+
+            elif tool_name == 'get_degree_requirements':
+                reqs = result.get('requirements', [])
+                if reqs:
+                    summary_parts.append("DEGREE REQUIREMENTS:")
+                    for r in reqs[:3]:
+                        summary_parts.append(f"- {r}")
+
+            elif tool_name == 'get_campus_facilities':
+                facilities = result.get('facilities', [])
+                if facilities:
+                    summary_parts.append("CAMPUS FACILITIES:")
+                    for f in facilities[:3]:
+                        name = f.get('name', 'Unknown')
+                        desc = f.get('description', '')
+                        summary_parts.append(f"- {name}: {desc}")
+
+            elif tool_name == 'get_university_system':
+                structure = result.get('system_structure', [])
+                if structure:
+                    summary_parts.append("UNIVERSITY SYSTEM INFO:")
+                    for s in structure[:3]:
+                        summary_parts.append(f"- {s}")
+
+            elif tool_name == 'get_academic_calendar':
+                events = result.get('upcoming_events', [])
+                if events:
+                    summary_parts.append("ACADEMIC CALENDAR HIGHLIGHTS:")
+                    for e in events[:3]:
+                        name = e.get('name', 'Unknown')
+                        date = e.get('date', '')
+                        summary_parts.append(f"- {name} on {date}")
+
+            elif tool_name == 'check_prerequisites':
+                unmet = result.get('unmet_prerequisites', [])
+                if unmet:
+                    summary_parts.append("UNMET PREREQUISITES:")
+                    for prereq in unmet[:3]:
+                        summary_parts.append(f"- {prereq}")
+
         return "\n".join(summary_parts) if summary_parts else "No specific context available"
 
     def _parse_scenario_json(self, response: str) -> Dict[str, Any]:
@@ -2382,29 +1772,9 @@ class GameDirector:
                 except json.JSONDecodeError:
                     pass
             
-            # Fallback
-            return self._create_simple_fallback()
+            # Return empty dict to signal failure
+            return {}
 
-    def _create_simple_fallback(self) -> Dict[str, Any]:
-        """Simple fallback when parsing fails"""
-        return {
-            "type": "life_choice",
-            "title": "Study Approach",
-            "situation": "How should you approach your studies this semester?",
-            "options": [
-                {
-                    "id": "intensive",
-                    "description": "Study intensively to master all subjects",
-                    "character_implication": "becomes more academically focused"
-                },
-                {
-                    "id": "balanced",
-                    "description": "Balance study time with social activities",
-                    "character_implication": "develops social skills alongside academics"
-                }
-            ]
-        }
-            
     def _parse_director_response(self, response: str) -> Dict[str, Any]:
         """Parse the director's analysis response"""
         result = {
@@ -2638,11 +2008,6 @@ def generate_choice():
         
         profile = game_sessions[session_id]
         logger.info(f"🎮 API REQUEST: Generate choice for session {session_id}")
-        
-        # Debug the method call
-        logger.info(f"🐛 DEBUG: About to call director.decide_next_scenario")
-        logger.info(f"🐛 DEBUG: director type: {type(director)}")
-        logger.info(f"🐛 DEBUG: profile type: {type(profile)}")
         
         # Use the AI Director to decide what happens next
         choice = director.decide_next_scenario(profile)

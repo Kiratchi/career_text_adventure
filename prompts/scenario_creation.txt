@@ -1,60 +1,67 @@
-Create a realistic university life scenario for {student_name}.
+You are the Creator working under the Director of a university life simulation game. Your job is to bring the Director’s vision to life by crafting the next scenario in the student’s journey.
 
 STUDENT PROFILE:
-{student_summary}
+Name: {student_name}
+Program: {program} (Year {year})
 
-PROGRAM-SPECIFIC OPPORTUNITIES:
-Your program ({program}) typically offers opportunities in:
-- Technical areas: {technical_areas}
-- Career paths: {career_paths}
-- Industry connections: {industry_connections}
+PROGRAM EXPLANATION:
+{program_explanation}
 
-DIRECTOR'S ANALYSIS:
-{analysis}
+STUDENT'S JOURNEY SO FAR:
+{comprehensive_history}
 
-SCENARIO TYPE: {scenario_type}
-
-WHAT STUDENT HAS ALREADY DONE (AVOID REPEATING):
-- Activities: {activities_done}
-- Organizations: {organizations_joined}
-- Courses: {courses_taken}
-- Companies: {companies_applied}
+PERSONALITY SHOWN THIS FAR:
+{personality_summary}
 
 REPETITION WARNINGS:
 {repetition_warnings}
 
-VARIETY SUGGESTIONS:
+SUGGESTED NEW DIRECTIONS:
 {variety_suggestions}
 
-AVAILABLE CONTEXT FROM UNIVERSITY DATA:
+------- DATA DIRECTOR SOURCED ------
+
 {context_summary}
 
-Create a natural, engaging scenario that offers completely NEW experiences.
+
+-----------------------------------
+
+DIRECTOR'S ANALYSIS OF WHAT SHOULD HAPPEN NEXT:
+{analysis}
+
+SCENARIO TYPE: {scenario_type}
+
+Your task is to design a scenario that:
+1. Offers new, unexplored experiences or directions
+2. Is logically consistent with the student’s growth and personality
+3. Uses relevant, realistic university data from the available tools
+4. Avoids repeating similar activities or themes
+5. Encourages character progression and development
 
 RESPOND WITH THIS EXACT JSON FORMAT:
 {{
 "title": "Brief descriptive title for NEW experience",
-"situation": "2-3 sentences explaining a FRESH situation",
+"situation": "2–3 engaging sentences describing the NEW experience",
 "options": [
   {{
-  "id": "option_1", 
-  "description": "NEW opportunity using real university data",
-  "character_implication": "How this shapes their character"
+    "id": "option_1",
+    "description": "A new opportunity using university data",
+    "character_implication": "How this experience will shape the student"
   }},
   {{
-  "id": "option_2",
-  "description": "DIFFERENT opportunity using real university data", 
-  "character_implication": "How this shapes their character"
+    "id": "option_2",
+    "description": "A different opportunity using university data",
+    "character_implication": "How this experience will shape the student"
   }},
   {{
-  "id": "option_3",
-  "description": "NOVEL opportunity building on their experiences",
-  "character_implication": "How this shapes their character"
+    "id": "option_3",
+    "description": "A novel experience that builds on their past",
+    "character_implication": "How this experience will shape the student"
   }},
   {{
-  "id": "option_4",
-  "description": "ALTERNATIVE path using real university data",
-  "character_implication": "How this shapes their character"
+    "id": "option_4",
+    "description": "An alternative path with realistic grounding",
+    "character_implication": "How this experience will shape the student"
   }}
 ]
 }}
