@@ -1,22 +1,20 @@
 from flask import Flask, render_template, request, jsonify, send_from_directory
 from flask_cors import CORS
-import threading
 import json
-import re
+import os
+import time
+import logging
 from pathlib import Path
+from dataclasses import dataclass, field, asdict
+from typing import Dict, List, Any, Optional, Set
+from datetime import datetime
+from collections import deque
+from abc import ABC, abstractmethod
 from dotenv import load_dotenv
 import litellm
 from litellm import completion
-import os
-from dataclasses import dataclass, field, asdict
-from typing import Dict, List, Any, Optional, Callable, Set  # Added Set here
-import logging
-from abc import ABC, abstractmethod
-import time
-from datetime import datetime
-from collections import deque
-from pathlib import Path
 
+# ==================== CONFIGURATION ====================
 
 # Setup
 load_dotenv()
@@ -27,60 +25,15 @@ CORS(app)
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-
-# Configuration from environment variables
+# LLM Configuration
 LITELLM_API_KEY = os.getenv('LITELLM_API_KEY')
 LITELLM_BASE_URL = os.getenv('LITELLM_BASE_URL', 'https://anast.ita.chalmers.se:4000')
 
-# Configure LiteLLM to use Chalmers proxy
+# Configure LiteLLM
 litellm.api_base = LITELLM_BASE_URL
-litellm.drop_params = True  # Drop unsupported parameters
+litellm.drop_params = True
 
-
-# LLM initialization
-try:
-    # Test available models - use the ones from your example
-    models_to_try = [
-        "claude-haiku-3.5",      # Fast and cost-effective
-        "claude-sonnet-3.7",     # Good balance
-        "gpt-4.1-2025-04-14",    # Latest GPT-4
-        "gpt-4.5-preview",       # GPT-4.5 preview
-        "claude-sonnet-4",       # High-quality Claude
-        "o1"                     # OpenAI O1
-    ]
-    
-    # Test first available model
-    api_key = LITELLM_API_KEY
-    if not api_key:
-        raise Exception("LITELLM_API_KEY not found in environment")
-    
-    llm_model = None
-    for model in models_to_try:
-        try:
-            test_response = litellm.completion(
-                model=model,
-                messages=[{"role": "user", "content": "Hello"}],
-                api_key=api_key,
-                max_tokens=5,
-                base_url=LITELLM_BASE_URL
-            )
-            llm_model = model
-            logger.info(f"✅ LLM initialized successfully with {model}")
-            break
-        except Exception as e:
-            logger.warning(f"Model {model} failed: {e}")
-            continue
-    
-    if not llm_model:
-        raise Exception("No available models found")
-    
-    llm = llm_model  # Store the working model name
-    
-except Exception as e:
-    logger.error(f"❌ Failed to initialize LLM: {e}")
-    llm = None
-
-
+# Prompt configuration for different LLM calls
 PROMPT_CONFIG = {
     "director_analysis": {"max_tokens": 1000, "temperature": 0.7},
     "scenario_creation": {"max_tokens": 1000, "temperature": 0.8},
@@ -91,6 +44,47 @@ PROMPT_CONFIG = {
     "simple_scenario": {"max_tokens": 300, "temperature": 0.8},
     "emergency_scenario": {"max_tokens": 200, "temperature": 0.5}
 }
+
+
+# ==================== LLM INITIALIZATION ====================
+
+def initialize_llm():
+    """Initialize LLM with available models"""
+    models_to_try = [
+        "claude-haiku-3.5", "claude-sonnet-3.7", "gpt-4.1-2025-04-14",
+        "gpt-4.5-preview", "claude-sonnet-4", "o1"
+    ]
+    
+    try:
+        api_key = LITELLM_API_KEY
+        if not api_key:
+            raise Exception("LITELLM_API_KEY not found in environment")
+        
+        for model in models_to_try:
+            try:
+                test_response = litellm.completion(
+                    model=model,
+                    messages=[{"role": "user", "content": "Hello"}],
+                    api_key=api_key,
+                    max_tokens=5,
+                    base_url=LITELLM_BASE_URL
+                )
+                logger.info(f"✅ LLM initialized successfully with {model}")
+                return model
+            except Exception as e:
+                logger.warning(f"Model {model} failed: {e}")
+                continue
+        
+        raise Exception("No available models found")
+        
+    except Exception as e:
+        logger.error(f"❌ Failed to initialize LLM: {e}")
+        return None
+
+# Initialize LLM
+llm = initialize_llm()
+
+# ==================== UTILITY FUNCTIONS ====================
 
 def make_llm_call(messages, max_tokens=300, model=None, call_type="general", prompt_name=None):
     """
@@ -188,12 +182,7 @@ def load_prompt(prompt_name: str, **kwargs) -> str:
         logger.error(f"📝 Error loading prompt {prompt_name}: {e}")
         return ""
 
-
-
-
-
-
-
+# ==================== KNOWLEDGE SYSTEM ====================
 
 class KnowledgeLoader:
     """Load knowledge from external files"""
@@ -237,6 +226,8 @@ class KnowledgeLoader:
 
 # Global knowledge loader
 knowledge = KnowledgeLoader()
+
+# ==================== DATA MODELS ====================
 
 @dataclass
 class PlayerProfile:
@@ -345,117 +336,7 @@ class PlayerProfile:
         result['scenario_types_encountered'] = list(self.scenario_types_encountered)
         return result
 
-class ProfileUpdateService:
-    """Service to update player profile text summaries using AI"""
-    
-    def __init__(self, llm):
-        self.llm = llm
-    
-    def update_profile_summaries(self, profile: PlayerProfile, choice_context: Dict[str, Any]):
-        """Update both history and personality summaries based on new choice"""
-        if not self.llm:
-            logger.warning("LLM not available for profile updates")
-            return
-        
-        try:
-            self._update_history_summary(profile, choice_context)
-            self._update_personality_summary(profile, choice_context)
-            self._update_current_situation(profile, choice_context)
-            
-        except Exception as e:
-            logger.error(f"Error updating profile summaries: {e}")
-    
-    def _update_history_summary(self, profile: PlayerProfile, choice_context: Dict[str, Any]):
-        """Update the comprehensive history text with better tracking"""
-        try:
-            # Format other options
-            other_options = []
-            for opt in choice_context.get('other_options', [])[:3]:
-                if isinstance(opt, dict):
-                    other_options.append(f"- {opt.get('description', opt)}")
-                else:
-                    other_options.append(f"- {opt}")
-            
-            # Load and format the prompt
-            prompt_content = load_prompt(
-                'update_history_summary',
-                student_name=profile.name,
-                program=profile.program,
-                year=profile.year,
-                current_history=profile.comprehensive_history if profile.comprehensive_history else "No history yet - this is their first significant choice.",
-                choice_type=choice_context['choice_type'],
-                choice_description=choice_context['choice_description'],
-                situation=choice_context['situation'],
-                character_implication=choice_context['character_implication'],
-                other_options='\n'.join(other_options)
-            )
-            
-            if prompt_content:
-                messages = [{"role": "user", "content": prompt_content}]
-                profile.comprehensive_history = make_llm_call(
-                    messages, 
-                    call_type="profile_update",
-                    prompt_name="update_history_summary"
-                )
-                logger.info(f"📝 Updated history summary: {profile.comprehensive_history[:100]}...")
-            
-        except Exception as e:
-            logger.error(f"Error updating history summary: {e}")
-    
-    def _update_personality_summary(self, profile: PlayerProfile, choice_context: Dict[str, Any]):
-        """Update the personality summary based on choices made"""
-        try:
-            recent_choices = '\n'.join([f"- {choice}" for choice in profile.life_choices[-3:]])
-            
-            prompt_content = load_prompt(
-                'update_personality_summary',
-                student_name=profile.name,
-                current_personality=profile.personality_summary if profile.personality_summary else profile.personality_description,
-                choice_description=choice_context['choice_description'],
-                character_implication=choice_context['character_implication'],
-                recent_choices=recent_choices
-            )
-            
-            if prompt_content:
-                messages = [{"role": "user", "content": prompt_content}]
-                profile.personality_summary = make_llm_call(
-                    messages, 
-                    call_type="profile_update",
-                    prompt_name="update_personality_summary"
-                )
-                logger.info(f"📝 Updated personality summary: {profile.personality_summary[:100]}...")
-            
-        except Exception as e:
-            logger.error(f"Error updating personality summary: {e}")
-    
-    def _update_current_situation(self, profile: PlayerProfile, choice_context: Dict[str, Any]):
-        """Update the current situation description"""
-        try:
-            # Determine season based on year and choice count
-            choice_count = len(profile.life_choices)
-            seasons = ["Autumn semester", "Spring semester", "Summer break", "Winter break"]
-            current_season = seasons[choice_count % 4]
-            
-            prompt_content = load_prompt(
-                'update_current_situation',
-                student_name=profile.name,
-                year=profile.year,
-                program=profile.program,
-                choice_description=choice_context['choice_description'],
-                season=current_season
-            )
-            
-            if prompt_content:
-                messages = [{"role": "user", "content": prompt_content}]
-                profile.current_situation = make_llm_call(
-                    messages, 
-                    call_type="profile_update",
-                    prompt_name="update_current_situation"
-                )
-                logger.info(f"📝 Updated current situation: {profile.current_situation}")
-            
-        except Exception as e:
-            logger.error(f"Error updating current situation: {e}")
+# ==================== DEBUG SYSTEM ====================
 
 @dataclass
 class LLMCall:
@@ -610,10 +491,122 @@ class AIDebugLogger:
 # Global debug logger
 debug_logger = AIDebugLogger()
 
+# ==================== DEBUG SYSTEM ====================
 
+class ProfileUpdateService:
+    """Service to update player profile text summaries using AI"""
+    
+    def __init__(self, llm):
+        self.llm = llm
+    
+    def update_profile_summaries(self, profile: PlayerProfile, choice_context: Dict[str, Any]):
+        """Update both history and personality summaries based on new choice"""
+        if not self.llm:
+            logger.warning("LLM not available for profile updates")
+            return
+        
+        try:
+            self._update_history_summary(profile, choice_context)
+            self._update_personality_summary(profile, choice_context)
+            self._update_current_situation(profile, choice_context)
+            
+        except Exception as e:
+            logger.error(f"Error updating profile summaries: {e}")
+    
+    def _update_history_summary(self, profile: PlayerProfile, choice_context: Dict[str, Any]):
+        """Update the comprehensive history text with better tracking"""
+        try:
+            # Format other options
+            other_options = []
+            for opt in choice_context.get('other_options', [])[:3]:
+                if isinstance(opt, dict):
+                    other_options.append(f"- {opt.get('description', opt)}")
+                else:
+                    other_options.append(f"- {opt}")
+            
+            # Load and format the prompt
+            prompt_content = load_prompt(
+                'update_history_summary',
+                student_name=profile.name,
+                program=profile.program,
+                year=profile.year,
+                current_history=profile.comprehensive_history if profile.comprehensive_history else "No history yet - this is their first significant choice.",
+                choice_type=choice_context['choice_type'],
+                choice_description=choice_context['choice_description'],
+                situation=choice_context['situation'],
+                character_implication=choice_context['character_implication'],
+                other_options='\n'.join(other_options)
+            )
+            
+            if prompt_content:
+                messages = [{"role": "user", "content": prompt_content}]
+                profile.comprehensive_history = make_llm_call(
+                    messages, 
+                    call_type="profile_update",
+                    prompt_name="update_history_summary"
+                )
+                logger.info(f"📝 Updated history summary: {profile.comprehensive_history[:100]}...")
+            
+        except Exception as e:
+            logger.error(f"Error updating history summary: {e}")
+    
+    def _update_personality_summary(self, profile: PlayerProfile, choice_context: Dict[str, Any]):
+        """Update the personality summary based on choices made"""
+        try:
+            recent_choices = '\n'.join([f"- {choice}" for choice in profile.life_choices[-3:]])
+            
+            prompt_content = load_prompt(
+                'update_personality_summary',
+                student_name=profile.name,
+                current_personality=profile.personality_summary if profile.personality_summary else profile.personality_description,
+                choice_description=choice_context['choice_description'],
+                character_implication=choice_context['character_implication'],
+                recent_choices=recent_choices
+            )
+            
+            if prompt_content:
+                messages = [{"role": "user", "content": prompt_content}]
+                profile.personality_summary = make_llm_call(
+                    messages, 
+                    call_type="profile_update",
+                    prompt_name="update_personality_summary"
+                )
+                logger.info(f"📝 Updated personality summary: {profile.personality_summary[:100]}...")
+            
+        except Exception as e:
+            logger.error(f"Error updating personality summary: {e}")
+    
+    def _update_current_situation(self, profile: PlayerProfile, choice_context: Dict[str, Any]):
+        """Update the current situation description"""
+        try:
+            # Determine season based on year and choice count
+            choice_count = len(profile.life_choices)
+            seasons = ["Autumn semester", "Spring semester", "Summer break", "Winter break"]
+            current_season = seasons[choice_count % 4]
+            
+            prompt_content = load_prompt(
+                'update_current_situation',
+                student_name=profile.name,
+                year=profile.year,
+                program=profile.program,
+                choice_description=choice_context['choice_description'],
+                season=current_season
+            )
+            
+            if prompt_content:
+                messages = [{"role": "user", "content": prompt_content}]
+                profile.current_situation = make_llm_call(
+                    messages, 
+                    call_type="profile_update",
+                    prompt_name="update_current_situation"
+                )
+                logger.info(f"📝 Updated current situation: {profile.current_situation}")
+            
+        except Exception as e:
+            logger.error(f"Error updating current situation: {e}")
 
+# ==================== DIRECTOR TOOLS ====================
 
-# Tool/Function System for the Director
 class DirectorTool(ABC):
     """Abstract base class for director tools"""
     
@@ -1841,7 +1834,7 @@ class GetHistoryContextTool(DirectorTool):
         
         return suggestions
 
-
+# ==================== GAME DIRECTOR ====================
 
 class GameDirector:
     """AI Director that decides what happens next in the game"""
@@ -2498,361 +2491,14 @@ class GameDirector:
             tool_name = cleaned_call.strip()
             logger.info(f"   → Tool: {tool_name}, No params")
             return tool_name, {}
-        """Parse a tool call string like 'get_courses()' or 'get_organizations(interest_category=Technology)'"""
-        logger.info(f"   Parsing tool call: {tool_call}")
-        
-        # Clean up the tool call - remove bullet points, dashes, and extra whitespace
-        cleaned_call = tool_call.strip()
-        if cleaned_call.startswith('-'):
-            cleaned_call = cleaned_call[1:].strip()
-        if cleaned_call.startswith('•'):
-            cleaned_call = cleaned_call[1:].strip()
-        
-        if '(' in cleaned_call:
-            tool_name = cleaned_call.split('(')[0].strip()
-            params_str = cleaned_call.split('(')[1].rstrip(')')
-            
-            params = {}
-            if params_str:
-                # Simple parameter parsing - could be more robust
-                for param in params_str.split(','):
-                    if '=' in param:
-                        key, value = param.split('=', 1)
-                        params[key.strip()] = value.strip().strip('"\'')
-            
-            logger.info(f"   → Tool: {tool_name}, Params: {params}")
-            return tool_name, params
-        else:
-            tool_name = cleaned_call.strip()
-            logger.info(f"   → Tool: {tool_name}, No params")
-            return tool_name, {}
 
+# ==================== GLOBAL INSTANCES ====================
 
-
-    # def _create_scenario_with_context(self, profile: PlayerProfile, scenario_type: str, analysis: str, tool_results: Dict[str, Any]) -> Dict[str, Any]:
-    #     """Create the final scenario using AI with context from tools and history awareness"""
-        
-    #     logger.info("🎬 PHASE 4: Creating final scenario with AI...")
-        
-    #     context_summary = self._summarize_tool_results(tool_results)
-    #     history_context = tool_results.get('history_context', {})
-        
-    #     try:
-    #         # Use simple prompt loading for scenario creation
-    #         prompt_content = load_prompt(
-    #             'scenario_creation',
-    #             student_name=profile.name,
-    #             student_summary=profile.get_character_summary(),
-    #             program=profile.program,
-    #             technical_areas=', '.join(self._get_technical_areas(profile.program)),
-    #             career_paths=', '.join(self._get_career_paths(profile.program)),
-    #             industry_connections=', '.join(self._get_industry_connections(profile.program)),
-    #             analysis=analysis,
-    #             scenario_type=scenario_type,
-    #             activities_done=', '.join(history_context.get('activities_already_done', [])),
-    #             organizations_joined=', '.join(history_context.get('organizations_joined', [])),
-    #             courses_taken=', '.join(history_context.get('courses_taken', [])),
-    #             companies_applied=', '.join(history_context.get('companies_applied', [])),
-    #             repetition_warnings='\n'.join(history_context.get('repetition_warnings', ['No repetition concerns'])),
-    #             variety_suggestions='\n'.join(history_context.get('variety_suggestions', ['Continue exploring new areas'])),
-    #             context_summary=context_summary
-    #         )
-            
-    #         if not prompt_content:
-    #             logger.warning("🎬 Scenario creation prompt failed to load, using fallback")
-    #             return self._create_fallback_scenario(profile)
-            
-    #         messages = [{"role": "user", "content": prompt_content}]
-    #         response = make_llm_call(
-    #             messages, 
-    #             call_type="scenario_creation",
-    #             prompt_name="scenario_creation"
-    #         )
-            
-    #         # Parse JSON response
-    #         scenario = self._parse_scenario_json(response)
-            
-    #         logger.info("🎬 SCENARIO GENERATED:")
-    #         logger.info(f"   Title: {scenario.get('title', 'Unknown')}")
-    #         logger.info(f"   Options: {len(scenario.get('options', []))} choices available")
-            
-    #         return scenario
-            
-    #     except Exception as e:
-    #         logger.error(f"🎬 Error creating scenario: {e}")
-    #         return self._create_fallback_scenario(profile)
-
-def _create_scenario_with_context(self, profile: PlayerProfile, scenario_type: str, analysis: str, tool_results: Dict[str, Any]) -> Dict[str, Any]:
-    """Create the final scenario using AI with context from tools and history awareness"""
-    
-    logger.info("🎬 PHASE 4: Creating final scenario with AI...")
-    logger.info(f"   Scenario type: {scenario_type}")
-    logger.info(f"   Using context from {len(tool_results)} tools")
-    
-    context_summary = self._summarize_tool_results(tool_results)
-    history_context = tool_results.get('history_context', {})
-    
-    try:
-        # Use simple prompt loading for scenario creation
-        prompt_content = load_prompt(
-            'scenario_creation',
-            student_name=profile.name,
-            student_summary=profile.get_character_summary(),
-            program=profile.program,
-            technical_areas=', '.join(self._get_technical_areas(profile.program)),
-            career_paths=', '.join(self._get_career_paths(profile.program)),
-            industry_connections=', '.join(self._get_industry_connections(profile.program)),
-            analysis=analysis,
-            scenario_type=scenario_type,
-            activities_done=', '.join(history_context.get('activities_already_done', [])),
-            organizations_joined=', '.join(history_context.get('organizations_joined', [])),
-            courses_taken=', '.join(history_context.get('courses_taken', [])),
-            companies_applied=', '.join(history_context.get('companies_applied', [])),
-            repetition_warnings='\n'.join(history_context.get('repetition_warnings', ['No repetition concerns'])),
-            variety_suggestions='\n'.join(history_context.get('variety_suggestions', ['Continue exploring new areas'])),
-            context_summary=context_summary
-        )
-        
-        # ADD THIS DEBUG LOGGING
-        logger.info(f"🎬 PROMPT LOADED: {len(prompt_content)} characters")
-        if not prompt_content:
-            logger.error("🎬 ERROR: Prompt content is empty!")
-            return self._create_fallback_scenario(profile)
-        
-        # Log first 200 chars of prompt for debugging
-        logger.info(f"🎬 PROMPT PREVIEW: {prompt_content[:200]}...")
-        
-        messages = [{"role": "user", "content": prompt_content}]
-        response = make_llm_call(
-            messages, 
-            call_type="scenario_creation",
-            prompt_name="scenario_creation"
-        )
-        
-        # ADD THIS DEBUG LOGGING
-        logger.info(f"🎬 AI RESPONSE: {len(response)} characters")
-        logger.info(f"🎬 RESPONSE PREVIEW: {response[:300]}...")
-        
-        # Parse JSON response
-        scenario = self._parse_scenario_json(response)
-        
-        # ADD THIS DEBUG LOGGING
-        if scenario.get('options'):
-            logger.info(f"🎬 SCENARIO PARSED SUCCESSFULLY: {len(scenario['options'])} options")
-        else:
-            logger.error("🎬 ERROR: Scenario parsing failed or no options found")
-            logger.error(f"🎬 PARSED SCENARIO: {scenario}")
-        
-        logger.info("🎬 SCENARIO GENERATED:")
-        logger.info(f"   Title: {scenario.get('title', 'Unknown')}")
-        logger.info(f"   Options: {len(scenario.get('options', []))} choices available")
-        
-        return scenario
-        
-    except Exception as e:
-        logger.error(f"🎬 Error creating scenario: {e}")
-        logger.error(f"🎬 Exception type: {type(e)}")
-        import traceback
-        logger.error(f"🎬 Full traceback: {traceback.format_exc()}")
-        return self._create_fallback_scenario(profile)
-
-# Also add this simple test function to check if prompt loading works
-def test_prompt_loading():
-    """Test function to check if prompt loading works"""
-    try:
-        # Test loading the scenario creation prompt
-        test_prompt = load_prompt(
-            'scenario_creation',
-            student_name="Test Student",
-            student_summary="Test summary",
-            program="Test Program",
-            technical_areas="Test areas",
-            career_paths="Test paths",
-            industry_connections="Test connections",
-            analysis="Test analysis",
-            scenario_type="Test type",
-            activities_done="Test activities",
-            organizations_joined="Test orgs",
-            courses_taken="Test courses",
-            companies_applied="Test companies",
-            repetition_warnings="Test warnings",
-            variety_suggestions="Test suggestions",
-            context_summary="Test context"
-        )
-        
-        print(f"✅ Prompt loaded successfully: {len(test_prompt)} characters")
-        print(f"📝 Preview: {test_prompt[:200]}...")
-        return True
-        
-    except Exception as e:
-        print(f"❌ Error loading prompt: {e}")
-        return False
-
-
-
-    def _summarize_tool_results(self, tool_results: Dict[str, Any]) -> str:
-        """Summarize tool results for context, including history awareness"""
-        summary_parts = []
-        
-        # Include history context first
-        if 'history_context' in tool_results:
-            history = tool_results['history_context']
-            if history.get('activities_already_done'):
-                summary_parts.append("STUDENT HAS ALREADY DONE:")
-                for activity in history.get('activities_already_done', []):
-                    summary_parts.append(f"  ❌ {activity}")
-            
-            if history.get('variety_suggestions'):
-                summary_parts.append("SUGGESTED NEW AREAS TO EXPLORE:")
-                for suggestion in history.get('variety_suggestions', []):
-                    summary_parts.append(f"  ✅ {suggestion}")
-            
-            summary_parts.append("")  # Add spacing
-        
-        # Then include other tool results
-        for tool_name, result in tool_results.items():
-            if tool_name == 'history_context' or 'error' in result:
-                continue
-            
-            if tool_name == 'get_courses':
-                electives = result.get('electives', [])
-                if electives:
-                    summary_parts.append(f"Available NEW courses: {', '.join(electives[:4])}")
-            
-            elif tool_name == 'get_organizations':
-                summary_parts.append("Student organizations (try NEW ones):")
-                for category, orgs in result.items():
-                    if isinstance(orgs, list):
-                        for org in orgs[:2]:  # Limit to avoid too much context
-                            if isinstance(org, dict):
-                                summary_parts.append(f"- {org.get('name', 'Unknown')}: {org.get('description', '')}")
-            
-            elif tool_name == 'get_companies':
-                summary_parts.append("Companies offering opportunities (try NEW ones):")
-                for industry, companies in result.items():
-                    if isinstance(companies, list):
-                        for company in companies[:2]:
-                            if isinstance(company, dict):
-                                opportunities = ', '.join(company.get('opportunities', [])[:2])
-                                summary_parts.append(f"- {company.get('name', 'Unknown')}: {opportunities}")
-            
-            elif tool_name == 'analyze_progress':
-                missing_areas = result.get('missing_areas', [])
-                if missing_areas:
-                    summary_parts.append(f"Unexplored areas (GOOD for new scenarios): {', '.join(missing_areas)}")
-        
-        return "\n".join(summary_parts) if summary_parts else "No specific context available"
-    
-    def _parse_scenario_json(self, response: str) -> Dict[str, Any]:
-        """Parse JSON scenario response with fallback"""
-        try:
-            parsed = json.loads(response.strip())
-            return {
-                "type": "life_choice",
-                "title": parsed.get("title", "Life Choice"),
-                "situation": parsed.get("situation", ""),
-                "options": parsed.get("options", [])
-            }
-        except json.JSONDecodeError:
-            # Try to extract JSON from response
-            start = response.find('{')
-            end = response.rfind('}') + 1
-            if start >= 0 and end > start:
-                try:
-                    json_str = response[start:end]
-                    parsed = json.loads(json_str)
-                    return {
-                        "type": "life_choice",
-                        "title": parsed.get("title", "Life Choice"),
-                        "situation": parsed.get("situation", ""),
-                        "options": parsed.get("options", [])
-                    }
-                except json.JSONDecodeError:
-                    pass
-            
-            # Fallback
-            return self._create_simple_fallback()
-    
-    def _create_fallback_scenario(self, profile: PlayerProfile) -> Dict[str, Any]:
-        """Create a simple fallback scenario"""
-        try:
-            prompt_content = load_prompt(
-                'simple_scenario',
-                student_name=profile.name,
-                program=profile.program,
-                year=profile.year,
-                context=profile.current_situation
-            )
-            
-            if prompt_content:
-                messages = [{"role": "user", "content": prompt_content}]
-                response = make_llm_call(
-                    messages, 
-                    call_type="fallback_scenario",
-                    prompt_name="simple_scenario"
-                )
-                
-                # Try to parse the response
-                scenario = self._parse_scenario_json(response)
-                if scenario.get('options'):
-                    return scenario
-        
-        except Exception as e:
-            logger.error(f"Error creating fallback scenario: {e}")
-        
-        # Ultimate fallback - hardcoded scenario
-        return {
-            "type": "life_choice",
-            "title": "Failed",
-            "situation": f"{profile.name} needs to make an decision when to program doenst work.",
-            "options": [
-                {
-                    "id": "NA",
-                    "description": "Choice 1",
-                    "character_implication": "NA"
-                },
-                {
-                    "id": "NA",
-                    "description": "Choice 1",
-                    "character_implication": "NA"
-                },
-                {
-                    "id": "NA",
-                    "description": "Choice 1",
-                    "character_implication": "NA"
-                }
-            ]
-        }
-    
-    def _create_simple_fallback(self) -> Dict[str, Any]:
-        """Simple fallback when parsing fails"""
-        return {
-            "type": "life_choice",
-            "title": "Study Approach",
-            "situation": "How should you approach your studies this semester?",
-            "options": [
-                {
-                    "id": "intensive",
-                    "description": "Study intensively to master all subjects",
-                    "character_implication": "becomes more academically focused"
-                },
-                {
-                    "id": "balanced",
-                    "description": "Balance study time with social activities",
-                    "character_implication": "develops social skills alongside academics"
-                }
-            ]
-        }
-
-# Global instances
 director = GameDirector(llm) if llm else None
 game_sessions = {}
 
+# ==================== API ROUTES ====================
 
-
-
-
-# API Routes (keeping existing ones and adding new director-based generation)
 @app.route('/')
 def index():
     """Serve the main HTML page"""
@@ -2926,38 +2572,6 @@ def set_program():
         logger.error(f"Error setting program: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
 
-# @app.route('/api/generate_choice', methods=['POST'])
-# def generate_choice():
-#     """Generate next choice scenario using the AI Director"""
-#     try:
-#         data = request.json
-#         session_id = data.get('session_id', 'default')
-        
-#         logger.info(f"🐛 DEBUG: Generate choice request for session: {session_id}")
-        
-#         if session_id not in game_sessions:
-#             return jsonify({"success": False, "error": "Session not found"}), 404
-        
-#         if not director:
-#             return jsonify({"success": False, "error": "AI director not available"}), 503
-        
-#         profile = game_sessions[session_id]
-#         logger.info(f"🎮 API REQUEST: Generate choice for session {session_id}")
-        
-#         # Pass session_id to the director
-#         choice = director.decide_next_scenario(profile, session_id)
-        
-#         logger.info(f"🎮 API RESPONSE: Successfully generated scenario for session {session_id}")
-        
-#         return jsonify({
-#             "success": True,
-#             "choice": choice
-#         })
-#     except Exception as e:
-#         logger.error(f"🎮 API ERROR: Error generating choice: {e}")
-#         return jsonify({"success": False, "error": str(e)}), 500
-
-
 @app.route('/api/generate_choice', methods=['POST'])
 def generate_choice():
     """Generate next choice scenario using the AI Director"""
@@ -2995,7 +2609,6 @@ def generate_choice():
         logger.error(f"🎮 API ERROR: Error generating choice: {e}")
         logger.error(f"🎮 API ERROR: Full traceback: {traceback.format_exc()}")
         return jsonify({"success": False, "error": str(e)}), 500
-
 
 @app.route('/api/make_choice', methods=['POST'])
 def make_choice():
@@ -3185,11 +2798,8 @@ def debug_status():
         return jsonify({"success": False, "error": str(e)}), 500
 
 
+# ==================== DEBUG ENDPOINTS ====================
 
-
-
-
-# Debug API endpoints
 @app.route('/debug')
 def debug_page():
     """Serve the debug interface HTML page"""
@@ -3244,7 +2854,6 @@ def debug_page():
 </html>'''
         return debug_html
 
-
 @app.route('/api/debug/last_scenario', methods=['GET'])
 def debug_last_scenario():
     """Get detailed info about the last scenario generation"""
@@ -3261,7 +2870,6 @@ def debug_last_scenario():
     except Exception as e:
         logger.error(f"Error getting last scenario debug data: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
-
 
 @app.route('/api/debug/player_profile', methods=['GET'])
 def debug_player_profile():
@@ -3312,7 +2920,6 @@ def debug_player_profile():
         logger.error(f"Error getting profile debug data: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
 
-
 @app.route('/api/debug/test_logging', methods=['POST'])
 def test_debug_logging():
     """Test if debug logging is working"""
@@ -3348,8 +2955,6 @@ def test_debug_logging():
         logger.error(f"Error testing debug logging: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
 
-
-
 @app.route('/api/debug/ai_process', methods=['GET'])
 def debug_ai_process():
     """Get detailed AI process debugging information"""
@@ -3383,135 +2988,8 @@ def debug_ai_process():
         return jsonify({"success": False, "error": str(e)}), 500
 
 
+# ==================== MAIN ====================
 
-
-
-# Add this enhanced logging to your _create_scenario_with_context method
-def _create_scenario_with_context(self, profile: PlayerProfile, scenario_type: str, analysis: str, tool_results: Dict[str, Any]) -> Dict[str, Any]:
-    """Create the final scenario using AI with context from tools and history awareness"""
-    
-    logger.info("🎬 PHASE 4: Creating final scenario with AI...")
-    logger.info(f"   Scenario type: {scenario_type}")
-    logger.info(f"   Using context from {len(tool_results)} tools")
-    
-    context_summary = self._summarize_tool_results(tool_results)
-    history_context = tool_results.get('history_context', {})
-    
-    try:
-        # Use simple prompt loading for scenario creation
-        prompt_content = load_prompt(
-            'scenario_creation',
-            student_name=profile.name,
-            student_summary=profile.get_character_summary(),
-            program=profile.program,
-            technical_areas=', '.join(self._get_technical_areas(profile.program)),
-            career_paths=', '.join(self._get_career_paths(profile.program)),
-            industry_connections=', '.join(self._get_industry_connections(profile.program)),
-            analysis=analysis,
-            scenario_type=scenario_type,
-            activities_done=', '.join(history_context.get('activities_already_done', [])),
-            organizations_joined=', '.join(history_context.get('organizations_joined', [])),
-            courses_taken=', '.join(history_context.get('courses_taken', [])),
-            companies_applied=', '.join(history_context.get('companies_applied', [])),
-            repetition_warnings='\n'.join(history_context.get('repetition_warnings', ['No repetition concerns'])),
-            variety_suggestions='\n'.join(history_context.get('variety_suggestions', ['Continue exploring new areas'])),
-            context_summary=context_summary
-        )
-        
-        # ADD THIS DEBUG LOGGING
-        logger.info(f"🎬 PROMPT LOADED: {len(prompt_content)} characters")
-        if not prompt_content:
-            logger.error("🎬 ERROR: Prompt content is empty!")
-            return self._create_fallback_scenario(profile)
-        
-        # Log first 200 chars of prompt for debugging
-        logger.info(f"🎬 PROMPT PREVIEW: {prompt_content[:200]}...")
-        
-        messages = [{"role": "user", "content": prompt_content}]
-        response = make_llm_call(
-            messages, 
-            call_type="scenario_creation",
-            prompt_name="scenario_creation"
-        )
-        
-        # ADD THIS DEBUG LOGGING
-        logger.info(f"🎬 AI RESPONSE: {len(response)} characters")
-        logger.info(f"🎬 RESPONSE PREVIEW: {response[:300]}...")
-        
-        # Parse JSON response
-        scenario = self._parse_scenario_json(response)
-        
-        # ADD THIS DEBUG LOGGING
-        if scenario.get('options'):
-            logger.info(f"🎬 SCENARIO PARSED SUCCESSFULLY: {len(scenario['options'])} options")
-        else:
-            logger.error("🎬 ERROR: Scenario parsing failed or no options found")
-            logger.error(f"🎬 PARSED SCENARIO: {scenario}")
-        
-        logger.info("🎬 SCENARIO GENERATED:")
-        logger.info(f"   Title: {scenario.get('title', 'Unknown')}")
-        logger.info(f"   Options: {len(scenario.get('options', []))} choices available")
-        
-        return scenario
-        
-    except Exception as e:
-        logger.error(f"🎬 Error creating scenario: {e}")
-        logger.error(f"🎬 Exception type: {type(e)}")
-        import traceback
-        logger.error(f"🎬 Full traceback: {traceback.format_exc()}")
-        return self._create_fallback_scenario(profile)
-
-# Also add this simple test function to check if prompt loading works
-def test_prompt_loading():
-    """Test function to check if prompt loading works"""
-    try:
-        # Test loading the scenario creation prompt
-        test_prompt = load_prompt(
-            'scenario_creation',
-            student_name="Test Student",
-            student_summary="Test summary",
-            program="Test Program",
-            technical_areas="Test areas",
-            career_paths="Test paths",
-            industry_connections="Test connections",
-            analysis="Test analysis",
-            scenario_type="Test type",
-            activities_done="Test activities",
-            organizations_joined="Test orgs",
-            courses_taken="Test courses",
-            companies_applied="Test companies",
-            repetition_warnings="Test warnings",
-            variety_suggestions="Test suggestions",
-            context_summary="Test context"
-        )
-        
-        print(f"✅ Prompt loaded successfully: {len(test_prompt)} characters")
-        print(f"📝 Preview: {test_prompt[:200]}...")
-        return True
-        
-    except Exception as e:
-        print(f"❌ Error loading prompt: {e}")
-        return False
-
-# Add this API endpoint to test prompt loading
-@app.route('/api/test/prompt_loading', methods=['GET'])
-def test_prompt_loading_endpoint():
-    """Test endpoint to check if prompt loading works"""
-    try:
-        success = test_prompt_loading()
-        return jsonify({
-            "success": success,
-            "message": "Check console for detailed output"
-        })
-    except Exception as e:
-        return jsonify({
-            "success": False,
-            "error": str(e)
-        }), 500
-
-
-
-########## IS MAIN ###########
 if __name__ == '__main__':
     logger.info("🚀 Starting Chalmers Life Journey with AI Director...")
     logger.info("📁 Validating knowledge files...")
@@ -3549,7 +3027,4 @@ if __name__ == '__main__':
     
     logger.info("🌐 Server starting on http://localhost:5000")
     app.run(debug=True, host='0.0.0.0', port=5000)
-
-
-
-
+    

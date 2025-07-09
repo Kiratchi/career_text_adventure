@@ -1,7 +1,4 @@
-function toggleCollapsible(header) {
-            const collapsible = header.parentElement;
-            collapsible.classList.toggle('open');
-        }<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -494,7 +491,17 @@ function toggleCollapsible(header) {
     <div class="container">
         <h1>AI Debug Interface</h1>
         
-        <button class="refresh-btn" onclick="refreshAllData()">🔄 Refresh Data</button>
+        <div style="display: flex; gap: 20px; align-items: center; margin-bottom: 20px;">
+            <button class="refresh-btn" onclick="refreshAllData()">🔄 Refresh Data</button>
+            
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <label for="session-selector" style="font-weight: 500;">Session:</label>
+                <select id="session-selector" onchange="onSessionChange()" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+                    <option value="">Loading sessions...</option>
+                </select>
+                <span id="session-info" style="font-size: 12px; color: #666;"></span>
+            </div>
+        </div>
         
         <div class="tabs">
             <button class="tab active" onclick="showTab('profile')">Player Profile</button>
@@ -547,6 +554,76 @@ function toggleCollapsible(header) {
 
     <script>
         let currentTab = 'profile';
+        let currentSession = '';
+        let availableSessions = [];
+        
+        function toggleCollapsible(header) {
+            const collapsible = header.parentElement;
+            collapsible.classList.toggle('open');
+        }
+        
+        function onSessionChange() {
+            const selector = document.getElementById('session-selector');
+            currentSession = selector.value;
+            console.log('🐛 Session changed to:', currentSession);
+            
+            // Update session info display
+            const sessionInfo = document.getElementById('session-info');
+            if (currentSession) {
+                sessionInfo.textContent = `Selected: ${currentSession}`;
+            } else {
+                sessionInfo.textContent = 'Using default session';
+            }
+            
+            // Refresh data for the new session
+            refreshAllData();
+        }
+        
+        function loadSessionsList() {
+            console.log('🐛 Loading sessions list...');
+            fetch('/api/debug/sessions')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('🐛 Sessions data received:', data);
+                    if (data.success) {
+                        availableSessions = Object.keys(data.sessions);
+                        updateSessionSelector(data.sessions);
+                    } else {
+                        console.error('Failed to load sessions:', data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('🐛 Sessions loading error:', error);
+                    const selector = document.getElementById('session-selector');
+                    selector.innerHTML = '<option value="">Error loading sessions</option>';
+                });
+        }
+        
+        function updateSessionSelector(sessions) {
+            const selector = document.getElementById('session-selector');
+            selector.innerHTML = '';
+            
+            // Add default option
+            const defaultOption = document.createElement('option');
+            defaultOption.value = '';
+            defaultOption.textContent = 'Auto-select session';
+            selector.appendChild(defaultOption);
+            
+            // Add session options
+            Object.entries(sessions).forEach(([sessionId, sessionData]) => {
+                const option = document.createElement('option');
+                option.value = sessionId;
+                option.textContent = `${sessionId} - ${sessionData.name || 'Unnamed'} (${sessionData.choices_made} choices)`;
+                selector.appendChild(option);
+            });
+            
+            console.log('🐛 Available sessions:', availableSessions);
+        }
         
         function showTab(tabName) {
             // Hide all tabs
@@ -564,6 +641,7 @@ function toggleCollapsible(header) {
         }
         
         function refreshAllData() {
+            loadSessionsList(); // Load sessions first
             loadPlayerProfile();
             loadLastScenario();
             loadLLMCalls();
@@ -572,19 +650,37 @@ function toggleCollapsible(header) {
         }
         
         function loadPlayerProfile() {
-            fetch('/api/debug/player_profile')
-                .then(response => response.json())
+            console.log('🐛 Loading player profile...');
+            const url = currentSession ? `/api/debug/player_profile?session_id=${currentSession}` : '/api/debug/player_profile';
+            console.log('🐛 Profile URL:', url);
+            
+            fetch(url)
+                .then(response => {
+                    console.log('🐛 Profile response status:', response.status);
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    return response.json();
+                })
                 .then(data => {
+                    console.log('🐛 Profile data received:', data);
                     if (data.success) {
                         displayPlayerProfile(data.profile, data.field_types);
+                        
+                        // Update session info with the actually used session
+                        const sessionInfo = document.getElementById('session-info');
+                        sessionInfo.textContent = `Viewing: ${data.session_id_used} | Available: ${data.available_sessions.join(', ')}`;
                     } else {
                         document.getElementById('profile-display').innerHTML = 
                             `<div class="error">Error: ${data.error}</div>`;
                     }
                 })
                 .catch(error => {
+                    console.error('🐛 Profile loading error:', error);
                     document.getElementById('profile-display').innerHTML = 
-                        `<div class="error">Error loading profile: ${error}</div>`;
+                        `<div class="error">Error loading profile: ${error.message}<br><br>
+                        Make sure your backend server is running and the API endpoint is accessible.<br>
+                        Expected endpoint: <code>/api/debug/player_profile</code></div>`;
                 });
         }
         
@@ -671,9 +767,17 @@ function toggleCollapsible(header) {
         }
         
         function loadLastScenario() {
+            console.log('🐛 Loading last scenario...');
             fetch('/api/debug/last_scenario')
-                .then(response => response.json())
+                .then(response => {
+                    console.log('🐛 Scenario response status:', response.status);
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    return response.json();
+                })
                 .then(data => {
+                    console.log('🐛 Scenario data received:', data);
                     if (data.success) {
                         displayLastScenario(data.scenario_generation);
                     } else {
@@ -682,8 +786,11 @@ function toggleCollapsible(header) {
                     }
                 })
                 .catch(error => {
+                    console.error('🐛 Scenario loading error:', error);
                     document.getElementById('scenario-display').innerHTML = 
-                        `<div class="error">Error loading scenario: ${error}</div>`;
+                        `<div class="error">Error loading scenario: ${error.message}<br><br>
+                        This is normal if no scenarios have been generated yet.<br>
+                        Try generating a choice in the main game first.</div>`;
                 });
         }
         
@@ -747,7 +854,8 @@ function toggleCollapsible(header) {
                         <div class="collapsible-content">
                 `;
                 
-                scenarioGen.tools_executed.forEach((tool, index) => {
+                // Reverse the order to show most recent tools first
+                [...scenarioGen.tools_executed].reverse().forEach((tool, index) => {
                     html += `
                         <div class="tool-execution ${tool.success ? 'success' : 'failed'}">
                             <div class="tool-header">
@@ -825,9 +933,17 @@ function toggleCollapsible(header) {
         }
         
         function loadLLMCalls() {
+            console.log('🐛 Loading LLM calls...');
             fetch('/api/debug/ai_process')
-                .then(response => response.json())
+                .then(response => {
+                    console.log('🐛 LLM calls response status:', response.status);
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    return response.json();
+                })
                 .then(data => {
+                    console.log('🐛 LLM calls data received:', data);
                     if (data.success) {
                         displayLLMCalls(data.debug_data.recent_llm_calls);
                     } else {
@@ -836,8 +952,9 @@ function toggleCollapsible(header) {
                     }
                 })
                 .catch(error => {
+                    console.error('🐛 LLM calls loading error:', error);
                     document.getElementById('llm-calls-display').innerHTML = 
-                        `<div class="error">Error loading LLM calls: ${error}</div>`;
+                        `<div class="error">Error loading LLM calls: ${error.message}</div>`;
                 });
         }
         
@@ -846,38 +963,44 @@ function toggleCollapsible(header) {
             
             let html = '';
             
-            llmCalls.forEach((call, index) => {
+            // Reverse the order to show most recent calls first
+            [...llmCalls].reverse().forEach((call, index) => {
                 html += `
-                    <div class="llm-call ${call.success ? 'success' : 'failed'}">
-                        <div class="metadata">
-                            <span><strong>${call.call_type}</strong></span>
-                            <span>${new Date(call.timestamp).toLocaleString()}</span>
-                            <span class="status-badge ${call.success ? 'status-success' : 'status-failed'}">
-                                ${call.success ? 'SUCCESS' : 'FAILED'}
+                    <div class="collapsible">
+                        <div class="collapsible-header" onclick="toggleCollapsible(this)">
+                            <span>
+                                <strong>${call.call_type}</strong> - 
+                                ${new Date(call.timestamp).toLocaleString()}
+                                <span class="status-badge ${call.success ? 'status-success' : 'status-failed'}">
+                                    ${call.success ? 'SUCCESS' : 'FAILED'}
+                                </span>
+                                <span class="timing-info">⏱️ ${call.processing_time.toFixed(3)}s</span>
                             </span>
-                            <span class="timing-info">⏱️ ${call.processing_time.toFixed(3)}s</span>
+                            <span class="collapsible-arrow">▶</span>
                         </div>
-                        
-                        <div class="section-divider"></div>
-                        
-                        <div class="llm-section">
-                            <div class="llm-section-header">
-                                <span>📝 Prompt</span>
-                                <span class="info-badge">${call.prompt.length} chars</span>
+                        <div class="collapsible-content">
+                            <div class="llm-call ${call.success ? 'success' : 'failed'}">
+                                <div class="llm-section">
+                                    <div class="llm-section-header">
+                                        <span>📝 Prompt</span>
+                                        <span class="info-badge">${call.prompt.length} chars</span>
+                                    </div>
+                                    <div class="prompt-box">${call.prompt}</div>
+                                </div>
+                                
+                                <div class="llm-section">
+                                    <div class="llm-section-header">
+                                        <span>🤖 Raw Response</span>
+                                        <span class="info-badge">${call.raw_response.length} chars</span>
+                                    </div>
+                                    <div class="response-box">${call.raw_response}</div>
+                                </div>
                             </div>
-                            <div class="prompt-box">${call.prompt}</div>
                         </div>
                         
-                        <div class="llm-section">
-                            <div class="llm-section-header">
-                                <span>🤖 Raw Response</span>
-                                <span class="info-badge">${call.raw_response.length} chars</span>
-                            </div>
-                            <div class="response-box">${call.raw_response}</div>
-                        </div>
-                        
-                        <div class="llm-section">
-                            <div class="llm-section-header">
+                        <!-- Always visible parsed response -->
+                        <div style="padding: 20px; border-top: 1px solid #dee2e6; background: #f8f9fa;">
+                            <div class="llm-section-header" style="margin-bottom: 10px;">
                                 <span>🔍 Parsed Response</span>
                                 <span class="info-badge">Structured</span>
                             </div>
@@ -912,7 +1035,8 @@ function toggleCollapsible(header) {
             
             let html = '';
             
-            toolExecutions.forEach((tool, index) => {
+            // Reverse the order to show most recent executions first
+            [...toolExecutions].reverse().forEach((tool, index) => {
                 html += `
                     <div class="tool-execution ${tool.success ? 'success' : 'failed'}">
                         <div class="tool-header">

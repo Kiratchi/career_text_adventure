@@ -8,6 +8,7 @@ An AI-powered interactive text adventure that simulates a realistic university j
 - **Dynamic Scenario Generation**: GPT-4 creates personalized scenarios based on your choices and program
 - **Intelligent Director System**: Prevents repetitive scenarios and ensures variety
 - **Contextual Decision Making**: Uses real Chalmers data to create authentic university experiences
+- **Text-Based Prompt System**: Easy-to-edit prompts stored as simple text files
 
 ### 🎯 **Authentic University Experience**
 - **15 Real Engineering Programs**: All actual Chalmers programs with accurate descriptions
@@ -31,7 +32,7 @@ An AI-powered interactive text adventure that simulates a realistic university j
 
 ### Prerequisites
 - Python 3.8+
-- OpenAI API key
+- LiteLLM API access (supports multiple AI providers)
 - Node.js (optional, for development)
 
 ### Installation
@@ -44,19 +45,22 @@ An AI-powered interactive text adventure that simulates a realistic university j
 
 2. **Install Python dependencies**
    ```bash
-   pip install flask flask-cors python-dotenv langchain-openai
+   pip install flask flask-cors python-dotenv litellm
    ```
 
 3. **Set up environment variables**
    ```bash
    # Create .env file
-   echo "OPENAI_API_KEY=your_openai_api_key_here" > .env
+   echo "LITELLM_API_KEY=your_api_key_here" > .env
+   echo "LITELLM_BASE_URL=https://your-litellm-endpoint.com" >> .env
    ```
 
-4. **Create knowledge directory and add JSON files**
+4. **Create knowledge and prompts directories**
    ```bash
    mkdir knowledge
+   mkdir prompts
    # Add your JSON files (see Knowledge Base section)
+   # Add your prompt files (see Prompt System section)
    ```
 
 5. **Run the application**
@@ -76,6 +80,7 @@ chalmers-life-journey/
 ├── app.py                      # Main Flask backend
 ├── index.html                  # Frontend interface
 ├── .env                        # Environment variables
+├── prompt_config.json          # AI prompt configuration
 ├── knowledge/                  # JSON knowledge base
 │   ├── programs.json          # 15 Chalmers programs (REQUIRED)
 │   ├── masters_programs.json  # Master's degree options
@@ -87,6 +92,15 @@ chalmers-life-journey/
 │   ├── swedish_university_info.json # University system info
 │   ├── study_abroad_programs.json # Exchange opportunities
 │   └── current_events.json    # Industry trends by field
+├── prompts/                    # AI prompt text files
+│   ├── director_analysis.txt  # Main scenario analysis
+│   ├── scenario_creation.txt  # Scenario generation
+│   ├── update_history_summary.txt # Profile updates
+│   ├── update_personality_summary.txt # Character development
+│   ├── update_current_situation.txt # Situation updates
+│   ├── masters_selection_scenario.txt # Master's selection
+│   ├── simple_scenario.txt    # Fallback scenarios
+│   └── emergency_scenario.txt # Emergency fallbacks
 └── README.md
 ```
 
@@ -154,6 +168,77 @@ The system uses JSON files to create realistic scenarios. Here's what each file 
 - **`study_abroad_programs.json`**: Exchange and international opportunities
 - **`current_events.json`**: Industry trends relevant to each program
 
+## 📝 Text-Based Prompt System
+
+The AI prompts are stored as simple text files for easy editing and maintenance.
+
+### Prompt Configuration
+
+#### `prompt_config.json`
+```json
+{
+  "director_analysis": {
+    "max_tokens": 1000,
+    "temperature": 0.7,
+    "description": "Analyzes student situation and decides what scenario to create next",
+    "variables": ["student_summary", "program", "activities_done", "repetition_warnings"]
+  },
+  "scenario_creation": {
+    "max_tokens": 1000,
+    "temperature": 0.8,
+    "description": "Creates the final scenario using AI with context from tools",
+    "variables": ["student_name", "program", "technical_areas", "analysis"]
+  }
+}
+```
+
+### Prompt Text Files
+
+#### `prompts/director_analysis.txt`
+```
+You are the Director of a university life simulation game. Your job is to decide what scenario should happen next for the student.
+
+STUDENT PROFILE:
+{student_summary}
+
+PROGRAM-SPECIFIC CONTEXT:
+Program: {program}
+Activities completed: {activities_done}
+
+REPETITION WARNINGS:
+{repetition_warnings}
+
+Create a scenario that offers NEW experiences and opportunities.
+```
+
+#### `prompts/scenario_creation.txt`
+```
+Create a realistic university life scenario for {student_name}.
+
+STUDENT PROFILE:
+{student_summary}
+
+PROGRAM OPPORTUNITIES:
+- Technical areas: {technical_areas}
+- Career paths: {career_paths}
+
+RESPOND WITH THIS EXACT JSON FORMAT:
+{
+  "title": "Brief descriptive title",
+  "situation": "2-3 sentences explaining the situation",
+  "options": [...]
+}
+```
+
+### Editing Prompts
+
+1. **Edit text files directly** in the `prompts/` directory
+2. **Update configuration** in `prompt_config.json` if needed
+3. **Reload prompts** without restarting server:
+   ```bash
+   curl -X POST http://localhost:5000/api/prompts/reload
+   ```
+
 ## 🎮 How to Play
 
 ### 1. **Start Your Journey**
@@ -179,10 +264,11 @@ The system uses JSON files to create realistic scenarios. Here's what each file 
 ## 🛠 Technical Architecture
 
 ### Backend (Flask)
-- **AI Director System**: Orchestrates scenario generation
+- **AI Director System**: Orchestrates scenario generation using text-based prompts
 - **Tool-Based Architecture**: 15+ specialized tools for different scenario types
 - **Profile Management**: Tracks student progression and history
 - **Knowledge Integration**: Seamlessly uses JSON data in scenarios
+- **Simple Prompt Loading**: Easy-to-edit text files for AI prompts
 
 ### Frontend (Vanilla JS + Modern CSS)
 - **Responsive Design**: Works on all devices
@@ -191,10 +277,11 @@ The system uses JSON files to create realistic scenarios. Here's what each file 
 - **Program Search**: Advanced filtering capabilities
 
 ### AI Integration
-- **GPT-4 Mini**: Powers scenario generation
+- **LiteLLM**: Supports multiple AI providers (OpenAI, Anthropic, etc.)
 - **Context-Aware**: Uses your full history for personalized content
 - **Repetition Avoidance**: Smart algorithms prevent boring repeated scenarios
 - **Data-Driven**: All scenarios use real Chalmers information
+- **Configurable Parameters**: Easy to adjust temperature and token limits
 
 ## 🔧 AI Director System
 
@@ -214,10 +301,18 @@ The core innovation is the AI Director that creates personalized scenarios:
 
 ### Scenario Generation Process
 1. **Analyze Student History**: What has the student already done?
-2. **Identify Growth Areas**: What new experiences would be valuable?
-3. **Gather Real Data**: Use appropriate tools to get university information
-4. **Generate Scenario**: AI creates personalized, authentic scenario
-5. **Present Choices**: 3-4 meaningful options that impact the journey
+2. **Load Analysis Prompt**: Get director analysis prompt from text file
+3. **AI Analysis**: Determine what type of scenario to create
+4. **Execute Tools**: Gather real university data based on analysis
+5. **Load Scenario Prompt**: Get scenario creation prompt from text file
+6. **Generate Scenario**: AI creates personalized, authentic scenario with 3-4 options
+
+### Prompt System Features
+- **Easy Editing**: Edit prompts in any text editor
+- **Hot Reload**: Update prompts without restarting server
+- **Version Control**: Track prompt changes in Git
+- **Configurable**: Adjust AI parameters per prompt
+- **Debugging**: Test prompts individually
 
 ## 🎯 Educational Value
 
@@ -232,6 +327,7 @@ The core innovation is the AI Director that creates personalized scenarios:
 - **Program Promotion**: Showcase the breadth of engineering education
 - **Interactive Learning**: Engage students with realistic scenarios
 - **Data-Driven Insights**: Based on real university information
+- **Customizable Content**: Easy to modify prompts for different contexts
 
 ## 🌟 Advanced Features
 
@@ -273,10 +369,17 @@ The core innovation is the AI Director that creates personalized scenarios:
 - `POST /api/generate_choice`: Get next scenario from AI Director
 - `POST /api/make_choice`: Submit player choice and update profile
 
+### Prompt Management
+- `GET /api/prompts/list`: List all available prompts
+- `POST /api/prompts/reload`: Reload all prompts from files
+- `GET /api/prompts/<name>`: Get specific prompt details
+- `PUT /api/prompts/<name>`: Update prompt content
+
 ### Debug & Admin
 - `POST /api/reload_knowledge`: Refresh JSON knowledge files
 - `GET /api/debug/sessions`: View active game sessions
 - `GET /api/debug/director_tools`: Inspect available AI tools
+- `GET /api/debug/prompts`: Debug prompt system status
 
 ## 🚀 Deployment Options
 
@@ -288,13 +391,14 @@ python app.py
 
 ### Production Deployment
 - **Heroku**: Add `Procfile` and `requirements.txt`
-- **Docker**: Containerize with Flask + knowledge files
+- **Docker**: Containerize with Flask + knowledge files + prompts
 - **AWS/Google Cloud**: Deploy as web service
 - **Self-hosted**: Use gunicorn + nginx
 
 ### Environment Variables
 ```env
-OPENAI_API_KEY=your_key_here
+LITELLM_API_KEY=your_key_here
+LITELLM_BASE_URL=https://your-endpoint.com
 FLASK_ENV=production
 PORT=5000
 ```
@@ -307,10 +411,16 @@ PORT=5000
 3. Update master's programs in `knowledge/masters_programs.json`
 4. Test scenario generation
 
-### Improving AI Scenarios
-1. Enhance prompt engineering in `GameDirector`
-2. Add new tools for specific scenario types
-3. Improve context awareness and variety
+### Improving AI Prompts
+1. Edit prompt files in `prompts/` directory
+2. Update configuration in `prompt_config.json`
+3. Test with `/api/prompts/reload`
+4. Version control your prompt changes
+
+### Adding New Scenario Types
+1. Create new prompt files for the scenario type
+2. Add configuration to `prompt_config.json`
+3. Create new director tools if needed
 4. Test with different student profiles
 
 ### Frontend Enhancements
@@ -324,9 +434,14 @@ PORT=5000
 ### Common Issues
 
 **"AI director not available"**
-- Check OpenAI API key in `.env` file
-- Verify internet connection
-- Ensure sufficient API credits
+- Check LITELLM_API_KEY in `.env` file
+- Verify LITELLM_BASE_URL is correct
+- Ensure API endpoint is accessible
+
+**"Prompt content is empty"**
+- Check if `prompts/` directory exists
+- Verify text files are present and readable
+- Use `/api/prompts/list` to check loaded prompts
 
 **"Knowledge file not found"**
 - Verify `knowledge/` directory exists
@@ -343,29 +458,32 @@ PORT=5000
 # Enable detailed logging
 logging.basicConfig(level=logging.DEBUG)
 
+# Check prompt system
+GET /api/debug/prompts
+
+# Test specific prompt
+GET /api/prompts/director_analysis
+
 # Check available tools
 GET /api/debug/director_tools
-
-# Monitor active sessions  
-GET /api/debug/sessions
 ```
 
 ## 📊 Performance Considerations
 
 ### API Rate Limits
-- OpenAI API: ~60 requests/minute
+- LiteLLM supports multiple providers
 - Implement caching for repeated scenarios
 - Consider response streaming for better UX
 
 ### Memory Usage
 - JSON files cached in memory
+- Prompt files loaded on demand
 - Session data grows with game length
-- Consider session cleanup for production
 
 ### Scalability
 - Stateless design enables horizontal scaling
 - JSON knowledge base easily versioned
-- AI scenarios cached and reusable
+- Text prompts easily distributed and cached
 
 ## 🎓 Educational Applications
 
@@ -374,6 +492,7 @@ GET /api/debug/sessions
 - **Engineering Career Exploration**: Discover different engineering fields  
 - **Decision Making Skills**: Practice important life choices
 - **Swedish University System**: Learn about European higher education
+- **Prompt Engineering**: Teach students about AI interaction
 
 ### Self-Directed Learning
 - **Program Research**: Explore Chalmers programs interactively
@@ -381,19 +500,22 @@ GET /api/debug/sessions
 - **University Culture**: Experience Swedish academic environment
 - **Personal Development**: Reflect on interests and goals
 
-## 📝 License
+## 🔧 Customization
 
-MIT License - feel free to use, modify, and distribute.
+### Adapting for Other Universities
+1. **Update knowledge files** with your university's data
+2. **Modify prompts** to reflect your university's culture
+3. **Adjust program structure** in code if needed
+4. **Test with university-specific scenarios**
 
-## 🙏 Acknowledgments
+### Changing AI Providers
+1. **Update environment variables** for new provider
+2. **Modify LiteLLM configuration** if needed
+3. **Test prompt compatibility** with new model
+4. **Adjust temperature/token settings** in `prompt_config.json`
 
-- **Chalmers University of Technology**: For inspiring this educational simulation
-- **OpenAI**: For powering the AI Director system
-- **Flask Community**: For the excellent web framework
-- **Contributors**: Everyone who helped make this project possible
-
----
-
-**Ready to start your Chalmers journey? 🚀**
-
-[Get Started](#quick-start) | [View Demo](http://localhost:5000) | [Report Issues](https://github.com/yourusername/chalmers-life-journey/issues)
+### Adding New Languages
+1. **Create translated prompt files** in `prompts/[language]/`
+2. **Add language detection** to prompt loading
+3. **Update knowledge files** with localized content
+4. **Test scenarios** in new language
