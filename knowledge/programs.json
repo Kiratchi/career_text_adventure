@@ -1,85 +1,68 @@
 {
-  "chalmers_engineering_programs": [
+  "programs": [
     {
-      "name": "Architecture and Technology",
-      "field": "Architecture",
-      "explanation": "Combines creative architectural design with solid engineering principles to equip students for shaping the built environment. Students learn to develop sustainable, intelligent, and aesthetically pleasing structures that address both environmental and societal needs. The program emphasizes hands-on studio projects, digital tools, and interdisciplinary collaboration."
+      "name": "Architecture and Engineering",
+      "explanation": "A unique program that combines design with natural sciences and engineering, preparing you for a future where working methods and digital design tools are increasingly boundary-crossing. You'll work with the design of large-span structures like bridges and arenas, climate-smart buildings, or concert halls with high acoustic requirements, as well as the development of future material properties and expressions. The program addresses both technical/scientific and aesthetic/humanistic foundations while training an investigative, creative, and reflective approach."
     },
     {
       "name": "Automation and Mechatronics",
-      "field": "Automation and Mechatronics",
-      "explanation": "Focuses on intelligent systems that integrate mechanics, electronics, and software. Students explore robotics, control systems, and automation technologies used in manufacturing, transport, and modern gadgets. The program prepares students to design, build, and optimize machines that interact with the physical world using sensors and feedback systems."
+      "explanation": "Advanced sensors and artificial intelligence are rapidly influencing the development of new technical products. In this program, you'll gain the tools to lead future technology in a smarter, cheaper, and more environmentally friendly direction. You'll get a broad introduction to engineering with elements of information technology, computer technology, artificial intelligence, as well as mechanics and electronics. The program is designed to increase your understanding of how mechanics, electronics, computers, and software work together."
     },
     {
       "name": "Biotechnology",
-      "field": "Chemical and Biotechnology",
-      "explanation": "Explores how biological systems can be engineered to solve problems in healthcare, agriculture, and sustainability. Students study molecular biology, bioprocessing, and chemical engineering to develop products like vaccines, renewable materials, and environmental solutions. The program balances theory with lab-based innovation and ethical considerations."
+      "explanation": "In biotechnology, studies of living organisms and their biological and chemical processes are combined to develop life-improving products for humans, animals, and nature. This can involve creating breakthrough medicines, developing renewable fuels, producing future food, or making the biotechnology industry more sustainable. You'll learn how cells and advanced organisms function and how to manipulate them to create solutions and products that make a difference."
     },
     {
       "name": "Computer Science and Engineering",
-      "field": "Computer Science",
-      "explanation": "Prepares students to build the digital technologies that power society. The program covers programming, algorithms, data science, artificial intelligence, and cybersecurity. It equips students with both theoretical and practical skills to design software systems, solve computational problems, and innovate in fields like fintech, healthtech, and robotics."
+      "explanation": "Computer technology is woven into almost everything, and it's hard to imagine life without computer-based products and services. Digital communication platforms, smart mobile phones, and small digital systems for monitoring and control are just a few examples of what is now considered natural parts of our society. With competence in computer science, you become the spider in the web that holds complicated projects together, contributing systems thinking since you understand the system from what the underlying hardware can do to how the application should look and the glue in between."
     },
     {
       "name": "Electrical Engineering",
-      "field": "Electrical Engineering",
-      "explanation": "Covers the generation, transmission, and use of electrical energy and information. Students delve into embedded systems, power electronics, signal processing, and smart grids. The program emphasizes real-world applications, from renewable energy systems to communication networks and intelligent hardware design."
+      "explanation": "As a civil engineer in electrical engineering, you create smart solutions to today's and tomorrow's challenges in energy supply, environmentally friendly and safe vehicles, smart cities, data communication, and much more. You're also involved in driving development towards a sustainable society and working to make everyday life easier for people worldwide. With knowledge of electricity and magnetism, you get the competence required to develop small and large systems, from kilometer-long power grids to mobile phone micrometer-sized components."
     },
     {
       "name": "Global Systems",
-      "field": "Engineering Physics, Engineering Mathematics and Global Systems",
-      "explanation": "Prepares students to tackle global challenges using systems thinking and analytical tools. The program focuses on climate systems, urban sustainability, and global governance through an engineering lens. Students develop models and strategies that consider complexity, uncertainty, and long-term impacts on people and the planet."
+      "explanation": "Humanity today faces a number of major challenges whose solutions will require comprehensive changes in both technology and society. This program prepares you to understand and handle the challenges we face at local and global levels. You'll learn to think systematically about these challenges and how they interact with society, technology, and nature. The program provides a foundation in mathematics, physics, and computer science with extensive elements of mathematical thinking, systems thinking, modeling, and problem-solving."
     },
     {
       "name": "Industrial Engineering and Management",
-      "field": "Industrial Engineering",
-      "explanation": "Bridges the gap between engineering and business. Students learn operations research, innovation management, logistics, and entrepreneurship. The program equips students to lead technical projects, manage organizations, and drive change in industries such as manufacturing, consulting, and tech."
+      "explanation": "Combine technology and economics in an education where you learn to develop both existing and new businesses. Your knowledge will make you sought after by industry and organizations as a project manager, business developer, or manager. In Industrial Engineering and Management, you initially gain basic knowledge of technology and technology-based business operations, then choose a more in-depth profile in the education. You'll get a solid technical foundation and understanding of organizational and economic issues through practical case studies."
     },
     {
       "name": "Information Technology",
-      "field": "Information Technology",
-      "explanation": "Blends computing with communication and software development. Students work on building secure, scalable, and user-friendly systems that connect people and data. The program covers databases, web technologies, networking, and human-computer interaction, preparing students for careers in IT infrastructure, development, and consulting."
+      "explanation": "Are you the next game developer, interaction designer, or system architect? With a civil engineering degree in information technology, you work with developing future software systems. In all sectors of society, technical problem solvers with a sense of user needs are needed. The education is for you who want to be part of an exciting and attractive industry with many opportunities. You'll primarily study software development and mathematics during the first three years, which forms the foundation of your engineering degree."
     },
     {
-      "name": "Mechanical Engineering and Technical Design",
-      "field": "Mechanical Engineering and Technical Design",
-      "explanation": "Combines classical mechanical engineering with product development and innovation methods. Students design and prototype everything from engines and industrial tools to consumer gadgets. The program includes simulation, CAD, materials science, and manufacturing processes, preparing students to turn ideas into functional and elegant solutions."
+      "name": "Mechanical Engineering",
+      "explanation": "Do you want to design and build everything from small components to large systems? With mechanical engineering, you can develop self-driving vehicles, life-saving robots, or find new ways to recycle everything from electronics to old products. As a mechanical engineer, you contribute practical solutions that make society more sustainable. This flexible program allows you to choose either a shorter university engineer track (3 years) or a longer civil engineer track (5 years)."
     },
     {
-      "name": "Medical Engineering",
-      "field": "Electrical Engineering",
-      "explanation": "Applies engineering methods to healthcare challenges. Students learn to design medical devices, diagnostics, and digital health systems. The program combines electronics, physiology, signal analysis, and biomedical innovation, aiming to improve diagnosis, treatment, and patient care through smart technologies."
+      "name": "Biomedical Engineering",
+      "explanation": "Through biomedical engineering, you can save lives and improve future health with advanced technology and artificial intelligence. Healthcare faces major challenges with an aging population, and your innovation will contribute to solutions in a globally growing future industry. The education is unique through close collaboration with Sahlgrenska Academy and Sahlgrenska University Hospital. You'll learn how to prevent, diagnose, monitor, and treat various diseases more easily using medical technology."
     },
     {
       "name": "Civil and Environmental Engineering",
-      "field": "Civil and Environmental Engineering",
-      "explanation": "Focuses on designing infrastructure and protecting natural resources. Students work on projects related to construction, water treatment, transportation systems, and climate resilience. The program emphasizes sustainable practices, urban planning, and engineering solutions for a growing and changing world."
+      "explanation": "Digitalization, sustainable development, electrification, and climate change are some of the complex challenges that society faces. As a civil engineer in civil and environmental engineering, you help shape future cities and society. You'll be confronted with today's and tomorrow's technical challenges to handle nature's resources, our society, and how we humans live and move in these environments. The education is characterized by a holistic view where all parts of building and managing a society are included."
     },
     {
-      "name": "Technical Design",
-      "field": "Mechanical Engineering and Technical Design",
-      "explanation": "Emphasizes creative product development rooted in technical expertise. Students are trained in design thinking, engineering mechanics, and prototyping. The program prepares students to bridge form and function—crafting products that are both technically robust and user-friendly, often working in interdisciplinary teams."
+      "name": "Engineering Design",
+      "explanation": "By putting the user in focus, you learn to develop products and innovations that make a real difference in people's daily lives. Here you get to take your ideas from sketch to reality in a creative design process. You get a holistic perspective on product development and learn to explore different combinations of form, material, and technology to create user-friendly and sustainable products that can actually change the world around you. This flexible program allows you to choose either a shorter university engineer track (3 years) or a longer civil engineer track (5 years)."
     },
     {
       "name": "Engineering Physics",
-      "field": "Engineering Physics, Engineering Mathematics and Global Systems",
-      "explanation": "Delivers a rigorous foundation in mathematics, physics, and computational modeling. Students study quantum mechanics, nanotechnology, and photonics, preparing them for research and advanced technology development. This program suits those with strong analytical abilities and curiosity about the fundamental laws of nature."
+      "explanation": "As a civil engineer in engineering physics, you learn to solve complex problems. This, combined with a strong theoretical foundation in physics, mathematics, and technology, will make you sought after in the job market. Virtually all major technology companies have technical physicists on their staff, usually in leading positions in research or development departments. The education's breadth makes room for technical physicists in most companies and organizations."
     },
     {
       "name": "Chemical Engineering",
-      "field": "Chemical and Biotechnology",
-      "explanation": "Covers how to convert raw materials into useful products through chemical processes. Students study reaction engineering, thermodynamics, and process control. The program supports careers in energy, materials, food, and pharmaceuticals with a strong focus on sustainability and efficiency."
+      "explanation": "Do you want to be part of creating the future? Chemical engineering is the education for you who want to combine molecular knowledge with technical problem-solving to meet society's major challenges. Here you get the tools to develop the next generation of medicines, new advanced materials, and innovative energy solutions. As a civil engineer in chemical engineering, you play an important role in shaping tomorrow's sustainable society and driving the circular transition."
     },
     {
       "name": "Engineering Mathematics",
-      "field": "Engineering Physics, Engineering Mathematics and Global Systems",
-      "explanation": "Equips students to solve complex problems through mathematical modeling and simulation. Topics include optimization, machine learning, fluid dynamics, and systems control. The program is ideal for those who enjoy abstraction and want to apply mathematical tools in engineering, finance, or research."
+      "explanation": "You who choose Engineering Mathematics think mathematics is fun and appreciate the subject's usefulness and theoretical weight. During the education, you train in problem-solving and learn to use powerful mathematical tools, giving you great opportunities for exciting jobs in many different industries. Mathematics plays a decisive role in all technical professional areas. The education's breadth prepares you to work with computational and computer science, AI and statistics, but also in industries such as the pharmaceutical industry, chemical industry, transport sector, urban planning, and communication and security."
+    },
+    {
+      "name": "Architecture",
+      "explanation": "Are you interested in how people live, how a good workplace can be shaped, and how our cities are built so that they are fair, attractive, and sustainable? This education is for you who want to work in teams and project form, and who want to develop your ability to design the built environment to contribute to sustainable development. You'll work with the design of buildings, streets, parks, and city districts, combining technical and artistic knowledge to achieve functionality and aesthetic solutions while following sustainable development as a common thread throughout your studies."
     }
-  ],
-  "metadata": {
-    "total_programs": 15,
-    "source": "Chalmers University of Technology",
-    "url": "https://www.chalmers.se/utbildning/hitta-program/",
-    "last_updated": "2025-06-27"
-  }
+  ]
 }

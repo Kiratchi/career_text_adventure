@@ -1,0 +1,381 @@
+{
+  "programs": [
+    {
+      "program_name": "Arkitektur och teknik, arkitekt/civilingenjör",
+      "program_url": "https://www.chalmers.se/utbildning/hitta-program/arkitektur-och-teknik-arkitektcivilingenjor/",
+      "program_plan_url": "https://www.chalmers.se/utbildning/hitta-program/arkitektur-och-teknik-arkitektcivilingenjor/#programplan",
+      "courses_by_year": {
+        "1": [
+          {
+            "course_code": "TBD",
+            "course_name": "Matematik",
+            "course_url": "https://www.chalmers.se/utbildning/hitta-program/arkitektur-och-teknik-arkitektcivilingenjor/"
+          },
+          {
+            "course_code": "TBD",
+            "course_name": "Arkitektur",
+            "course_url": "https://www.chalmers.se/utbildning/hitta-program/arkitektur-och-teknik-arkitektcivilingenjor/"
+          },
+          {
+            "course_code": "TBD",
+            "course_name": "Matematik (År 1)",
+            "course_url": ""
+          },
+          {
+            "course_code": "TBD",
+            "course_name": "Fysik (År 1)",
+            "course_url": ""
+          },
+          {
+            "course_code": "TBD",
+            "course_name": "Projekt (År 1)",
+            "course_url": ""
+          }
+        ],
+        "2": [
+          {
+            "course_code": "TBD",
+            "course_name": "Fysik",
+            "course_url": "https://www.chalmers.se/utbildning/hitta-program/arkitektur-och-teknik-arkitektcivilingenjor/"
+          },
+          {
+            "course_code": "TBD",
+            "course_name": "Design",
+            "course_url": "https://www.chalmers.se/utbildning/hitta-program/arkitektur-och-teknik-arkitektcivilingenjor/"
+          }
+        ],
+        "3": [
+          {
+            "course_code": "TBD",
+            "course_name": "Kemi",
+            "course_url": "https://www.chalmers.se/utbildning/hitta-program/arkitektur-och-teknik-arkitektcivilingenjor/"
+          },
+          {
+            "course_code": "TBD",
+            "course_name": "Ledning",
+            "course_url": "https://www.chalmers.se/utbildning/hitta-program/arkitektur-och-teknik-arkitektcivilingenjor/"
+          },
+          {
+            "course_code": "TBD",
+            "course_name": "Matematik (År 3)",
+            "course_url": ""
+          }
+        ],
+        "4": [
+          {
+            "course_code": "TBD",
+            "course_name": "Mekanik",
+            "course_url": "https://www.chalmers.se/utbildning/hitta-program/arkitektur-och-teknik-arkitektcivilingenjor/"
+          },
+          {
+            "course_code": "TBD",
+            "course_name": "Masterprogram",
+            "course_url": "https://www.chalmers.se/utbildning/hitta-program/arkitektur-och-teknik-arkitektcivilingenjor/"
+          },
+          {
+            "course_code": "TBD",
+            "course_name": "Matematik (År 4)",
+            "course_url": ""
+          }
+        ],
+        "5": [
+          {
+            "course_code": "TBD",
+            "course_name": "Statistik",
+            "course_url": "https://www.chalmers.se/utbildning/hitta-program/arkitektur-och-teknik-arkitektcivilingenjor/"
+          }
+        ]
+      },
+      "total_courses": 14,
+      "extraction_timestamp": "2025-07-09 17:12:11"
+    },
+    {
+      "program_name": "Datateknik, civilingenjör",
+      "program_url": "https://www.chalmers.se/utbildning/hitta-program/datateknik-civilingenjor/",
+      "program_plan_url": "https://www.chalmers.se/utbildning/hitta-program/datateknik-civilingenjor/#programplan",
+      "courses_by_year": {
+        "1": [
+          {
+            "course_code": "TBD",
+            "course_name": "Matematik",
+            "course_url": "https://www.chalmers.se/utbildning/hitta-program/datateknik-civilingenjor/"
+          },
+          {
+            "course_code": "TBD",
+            "course_name": "Elektroteknik",
+            "course_url": "https://www.chalmers.se/utbildning/hitta-program/datateknik-civilingenjor/"
+          },
+          {
+            "course_code": "TBD",
+            "course_name": "Algoritmer",
+            "course_url": "https://www.chalmers.se/utbildning/hitta-program/datateknik-civilingenjor/"
+          },
+          {
+            "course_code": "TBD",
+            "course_name": "Kandidatarbete",
+            "course_url": "https://www.chalmers.se/utbildning/hitta-program/datateknik-civilingenjor/"
+          },
+          {
+            "course_code": "TBD",
+            "course_name": "Matematik (År 1)",
+            "course_url": ""
+          },
+          {
+            "course_code": "TBD",
+            "course_name": "Fysik (År 1)",
+            "course_url": ""
+          },
+          {
+            "course_code": "TBD",
+            "course_name": "Kemi (År 1)",
+            "course_url": ""
+          }
+        ],
+        "2": [
+          {
+            "course_code": "TBD",
+            "course_name": "Fysik",
+            "course_url": "https://www.chalmers.se/utbildning/hitta-program/datateknik-civilingenjor/"
+          },
+          {
+            "course_code": "TBD",
+            "course_name": "Datateknik",
+            "course_url": "https://www.chalmers.se/utbildning/hitta-program/datateknik-civilingenjor/"
+          },
+          {
+            "course_code": "TBD",
+            "course_name": "Artificiell Intelligens",
+            "course_url": "https://www.chalmers.se/utbildning/hitta-program/datateknik-civilingenjor/"
+          },
+          {
+            "course_code": "TBD",
+            "course_name": "Masterprogram",
+            "course_url": "https://www.chalmers.se/utbildning/hitta-program/datateknik-civilingenjor/"
+          }
+        ],
+        "3": [
+          {
+            "course_code": "TBD",
+            "course_name": "Kemi",
+            "course_url": "https://www.chalmers.se/utbildning/hitta-program/datateknik-civilingenjor/"
+          },
+          {
+            "course_code": "TBD",
+            "course_name": "Arkitektur",
+            "course_url": "https://www.chalmers.se/utbildning/hitta-program/datateknik-civilingenjor/"
+          },
+          {
+            "course_code": "TBD",
+            "course_name": "Cybersäkerhet",
+            "course_url": "https://www.chalmers.se/utbildning/hitta-program/datateknik-civilingenjor/"
+          },
+          {
+            "course_code": "TBD",
+            "course_name": "Fysik (År 3)",
+            "course_url": ""
+          },
+          {
+            "course_code": "TBD",
+            "course_name": "Matematik (År 3)",
+            "course_url": ""
+          },
+          {
+            "course_code": "TBD",
+            "course_name": "Projekt (År 3)",
+            "course_url": ""
+          }
+        ],
+        "4": [
+          {
+            "course_code": "TBD",
+            "course_name": "Statistik",
+            "course_url": "https://www.chalmers.se/utbildning/hitta-program/datateknik-civilingenjor/"
+          },
+          {
+            "course_code": "TBD",
+            "course_name": "Design",
+            "course_url": "https://www.chalmers.se/utbildning/hitta-program/datateknik-civilingenjor/"
+          },
+          {
+            "course_code": "TBD",
+            "course_name": "Elektronik",
+            "course_url": "https://www.chalmers.se/utbildning/hitta-program/datateknik-civilingenjor/"
+          },
+          {
+            "course_code": "TBD",
+            "course_name": "Projekt (År 4)",
+            "course_url": ""
+          }
+        ],
+        "5": [
+          {
+            "course_code": "TBD",
+            "course_name": "Analys",
+            "course_url": "https://www.chalmers.se/utbildning/hitta-program/datateknik-civilingenjor/"
+          },
+          {
+            "course_code": "TBD",
+            "course_name": "Ledning",
+            "course_url": "https://www.chalmers.se/utbildning/hitta-program/datateknik-civilingenjor/"
+          },
+          {
+            "course_code": "TBD",
+            "course_name": "Digitala System",
+            "course_url": "https://www.chalmers.se/utbildning/hitta-program/datateknik-civilingenjor/"
+          }
+        ]
+      },
+      "total_courses": 24,
+      "extraction_timestamp": "2025-07-09 17:12:12"
+    },
+    {
+      "program_name": "Elektroteknik, civilingenjör",
+      "program_url": "https://www.chalmers.se/utbildning/hitta-program/elektroteknik-civilingenjor/",
+      "program_plan_url": "https://www.chalmers.se/utbildning/hitta-program/elektroteknik-civilingenjor/#programplan",
+      "courses_by_year": {
+        "1": [
+          {
+            "course_code": "TBD",
+            "course_name": "Matematik",
+            "course_url": "https://www.chalmers.se/utbildning/hitta-program/elektroteknik-civilingenjor/"
+          },
+          {
+            "course_code": "TBD",
+            "course_name": "Analys",
+            "course_url": "https://www.chalmers.se/utbildning/hitta-program/elektroteknik-civilingenjor/"
+          },
+          {
+            "course_code": "TBD",
+            "course_name": "Design",
+            "course_url": "https://www.chalmers.se/utbildning/hitta-program/elektroteknik-civilingenjor/"
+          },
+          {
+            "course_code": "TBD",
+            "course_name": "Kandidatarbete",
+            "course_url": "https://www.chalmers.se/utbildning/hitta-program/elektroteknik-civilingenjor/"
+          },
+          {
+            "course_code": "TBD",
+            "course_name": "Matematik (År 1)",
+            "course_url": ""
+          },
+          {
+            "course_code": "TBD",
+            "course_name": "Programmering (År 1)",
+            "course_url": ""
+          },
+          {
+            "course_code": "TBD",
+            "course_name": "Fysik (År 1)",
+            "course_url": ""
+          },
+          {
+            "course_code": "TBD",
+            "course_name": "Projekt (År 1)",
+            "course_url": ""
+          },
+          {
+            "course_code": "TBD",
+            "course_name": "Kemi (År 1)",
+            "course_url": ""
+          }
+        ],
+        "2": [
+          {
+            "course_code": "TBD",
+            "course_name": "Programmering",
+            "course_url": "https://www.chalmers.se/utbildning/hitta-program/elektroteknik-civilingenjor/"
+          },
+          {
+            "course_code": "TBD",
+            "course_name": "Elektroteknik",
+            "course_url": "https://www.chalmers.se/utbildning/hitta-program/elektroteknik-civilingenjor/"
+          },
+          {
+            "course_code": "TBD",
+            "course_name": "Konstruktion",
+            "course_url": "https://www.chalmers.se/utbildning/hitta-program/elektroteknik-civilingenjor/"
+          },
+          {
+            "course_code": "TBD",
+            "course_name": "Examensarbete",
+            "course_url": "https://www.chalmers.se/utbildning/hitta-program/elektroteknik-civilingenjor/"
+          }
+        ],
+        "3": [
+          {
+            "course_code": "TBD",
+            "course_name": "Fysik",
+            "course_url": "https://www.chalmers.se/utbildning/hitta-program/elektroteknik-civilingenjor/"
+          },
+          {
+            "course_code": "TBD",
+            "course_name": "Datateknik",
+            "course_url": "https://www.chalmers.se/utbildning/hitta-program/elektroteknik-civilingenjor/"
+          },
+          {
+            "course_code": "TBD",
+            "course_name": "Ekonomi",
+            "course_url": "https://www.chalmers.se/utbildning/hitta-program/elektroteknik-civilingenjor/"
+          },
+          {
+            "course_code": "TBD",
+            "course_name": "Masterprogram",
+            "course_url": "https://www.chalmers.se/utbildning/hitta-program/elektroteknik-civilingenjor/"
+          },
+          {
+            "course_code": "TBD",
+            "course_name": "Matematik (År 3)",
+            "course_url": ""
+          },
+          {
+            "course_code": "TBD",
+            "course_name": "Projekt (År 3)",
+            "course_url": ""
+          }
+        ],
+        "4": [
+          {
+            "course_code": "TBD",
+            "course_name": "Kemi",
+            "course_url": "https://www.chalmers.se/utbildning/hitta-program/elektroteknik-civilingenjor/"
+          },
+          {
+            "course_code": "TBD",
+            "course_name": "Maskinteknik",
+            "course_url": "https://www.chalmers.se/utbildning/hitta-program/elektroteknik-civilingenjor/"
+          },
+          {
+            "course_code": "TBD",
+            "course_name": "Ledning",
+            "course_url": "https://www.chalmers.se/utbildning/hitta-program/elektroteknik-civilingenjor/"
+          }
+        ],
+        "5": [
+          {
+            "course_code": "TBD",
+            "course_name": "Statistik",
+            "course_url": "https://www.chalmers.se/utbildning/hitta-program/elektroteknik-civilingenjor/"
+          },
+          {
+            "course_code": "TBD",
+            "course_name": "Arkitektur",
+            "course_url": "https://www.chalmers.se/utbildning/hitta-program/elektroteknik-civilingenjor/"
+          },
+          {
+            "course_code": "TBD",
+            "course_name": "Elektronik",
+            "course_url": "https://www.chalmers.se/utbildning/hitta-program/elektroteknik-civilingenjor/"
+          }
+        ]
+      },
+      "total_courses": 25,
+      "extraction_timestamp": "2025-07-09 17:12:14"
+    }
+  ],
+  "total_programs_processed": 3,
+  "extraction_summary": {
+    "total_courses_found": 63,
+    "programs_with_courses": 3
+  }
+}
