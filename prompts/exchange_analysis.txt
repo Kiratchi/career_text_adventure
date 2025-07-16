@@ -3,7 +3,6 @@ You are the Director of a university life simulation game. A master's student ha
 STUDENT PROFILE:
 Name: {student_name}
 Program: {program} (Year {year})
-
 PROGRAM EXPLANATION:
 {program_explanation}
 
@@ -12,6 +11,9 @@ STUDENT'S JOURNEY SO FAR:
 
 PERSONALITY SHOWN SO FAR:
 {personality_summary}
+
+SELECTED MASTER'S PROGRAM:
+{masters_program}
 
 Your job is to analyze what kind of exchange scenario would be most appropriate for this student based on:
 1. Their personality and previous choices
@@ -34,4 +36,4 @@ ANALYSIS:
 SCENARIO_TYPE:
 [A specific type of exchange scenario - be creative and specific based on their personality, e.g., "research_focused_exchange", "cultural_immersion_decision", "cost_vs_prestige_dilemma", "relationship_vs_adventure_choice", etc.]
 
-IMPORTANT: Focus on creating a scenario that feels natural for THIS specific student based on their established personality and journey.
+IMPORTANT: Focus on creating a scenario that feels natural for THIS specific student based on their established personality and journey. This is a high-level decision - specific exchange details will be added later.

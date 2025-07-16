@@ -1878,7 +1878,8 @@ Are you ready to discover which program will unlock your potential?`;
                 storyContent.appendChild(choiceContainer);
             }
             
-            storyContent.scrollTop = 0; // Scroll to top to see new choice
+            storyContent.scrollTop = 0;
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
         // Display master's selection using the enhanced modal (same as program selection)

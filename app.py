@@ -6,7 +6,7 @@ import time
 import logging
 from pathlib import Path
 from dataclasses import dataclass, field, asdict
-from typing import Dict, List, Any, Optional, Set
+from typing import Dict, List, Tuple, Any, Optional, Set
 from datetime import datetime
 from collections import deque
 from abc import ABC, abstractmethod
@@ -1060,14 +1060,16 @@ class GetProgramsExplanation:
 # ==================== GAME DIRECTOR ====================
 
 class GameDirector:
-    """Simplified Game Director using the new tool system"""
+    """Enhanced Game Director with simplified unified scenario generation"""
     
     def __init__(self, llm, knowledge_loader):
         self.llm = llm
         self.knowledge = knowledge_loader
         self.tools = self._initialize_tools()
+        self._generating_scenario = False
+        self._current_ai_analysis = {}
     
-    def _initialize_tools(self) -> Dict[str, SimplifiedToolBase]:
+    def _initialize_tools(self) -> Dict[str, Any]:
         """Initialize all registered tools"""
         tools = {}
         for tool_name, tool_class in _tool_registry.items():
@@ -1077,17 +1079,7 @@ class GameDirector:
         logger.info(f"🎬 Director initialized with {len(tools)} tools")
         return tools
     
-    def _get_tool_descriptions(self) -> str:
-        """Get descriptions of all available tools for LLM prompts"""
-        descriptions = []
-        for tool_name, tool in self.tools.items():
-            # Get description from docstring
-            description = tool.__class__.__doc__ or f"Tool for {tool_name}"
-            descriptions.append(f"- {tool_name}: {description.strip()}")
-        
-        return "\n".join(descriptions)
-    
-    def _execute_tool(self, tool_name: str, profile: PlayerProfile) -> str:
+    def _execute_tool(self, tool_name: str, profile: Any) -> str:
         """Execute a specific tool"""
         if tool_name not in self.tools:
             logger.warning(f"🔧 Tool '{tool_name}' not found")
@@ -1105,178 +1097,9 @@ class GameDirector:
         except Exception as e:
             logger.error(f"Error executing tool {tool_name}: {e}")
             return f"Error executing {tool_name}: {str(e)}"
-    
-    def should_trigger_masters_selection(self, profile: PlayerProfile) -> bool:
-        """Check if we should trigger master's program selection when transitioning 3->4"""
-        # Only trigger when student is exactly in year 3 and about to advance to year 4
-        if profile.year != 3:
-            return False
-        
-        # Don't trigger if already selected
-        if profile.selected_masters_program:
-            return False
-        
-        # Don't trigger if already seen master's selection
-        if any('master' in choice.lower() for choice in profile.life_choices):
-            return False
-        
-        # Check if student is about to advance to year 4
-        choices_count = len(profile.life_choices)
-        # If they have 5 choices (end of year 3 with 2 choices per year), they should select master's before year 4
-        return choices_count >= 5
 
-    def should_trigger_exchange_scenario(self, profile: PlayerProfile) -> bool:
-        """Check if we should trigger exchange scenario - only during master's, 50% chance"""
-        # Only trigger during master's years (Year 4 or 5)
-        if profile.year < 4:
-            return False
-        
-        # Don't trigger if already done exchange
-        if any('exchange' in choice.lower() for choice in profile.life_choices):
-            return False
-        
-        # Don't trigger if already seen exchange decision
-        if any('abroad' in choice.lower() or 'international' in choice.lower() for choice in profile.life_choices):
-            return False
-        
-        # 50% chance trigger - use student name as seed for consistency
-        import hashlib
-        seed = hashlib.md5(f"{profile.name}_exchange_{profile.year}".encode()).hexdigest()
-        # Convert first 8 chars of hash to int, check if even (50% chance)
-        return int(seed[:8], 16) % 2 == 0
-
-    def create_exchange_scenario(self, profile: PlayerProfile) -> Dict[str, Any]:
-        """Create an exchange opportunity scenario"""
-        
-        # Get exchange information using the tool
-        exchange_info = self._execute_tool('exchange', profile)
-        
-        if "not available" in exchange_info or "Error" in exchange_info:
-            return self._create_ai_crash_fallback(profile)
-        
-        # Create urgency text based on year
-        if profile.year == 4:
-            urgency_text = "It's the perfect time to consider an international exchange for your master's program!"
-        else:
-            urgency_text = "This might be your last chance to do an exchange before graduation."
-        
-        # Use simple prompt loading for exchange scenario
-        try:
-            situation = load_prompt(
-                'exchange_scenario',
-                student_name=profile.name,
-                year=profile.year,
-                program=profile.program,
-                urgency_text=urgency_text,
-                exchange_info=exchange_info[:500]  # Truncate for prompt
-            )
-        except:
-            # Fallback if prompt doesn't exist
-            situation = f"{urgency_text} The international office has presented you with several exciting exchange opportunities for your master's studies."
-        
-        # Create exchange options
-        options = [
-            {
-                "id": "exchange_europe",
-                "description": "Apply for Erasmus+ exchange to a top European technical university (ETH Zurich, TU Delft, or RWTH Aachen)",
-                "character_implication": "gains international perspective, builds European network, experiences different academic culture while staying relatively close to home"
-            },
-            {
-                "id": "exchange_usa",
-                "description": "Pursue exchange at a prestigious US university (MIT, Stanford, UC Berkeley) despite higher costs",
-                "character_implication": "experiences Silicon Valley innovation culture, builds transatlantic connections, develops confidence in high-pressure academic environment"
-            },
-            {
-                "id": "exchange_asia",
-                "description": "Choose an Asian destination (NUS Singapore, University of Tokyo) for unique cultural immersion",
-                "character_implication": "develops global mindset, learns to adapt to very different culture, gains perspective on technology in Asian markets"
-            },
-            {
-                "id": "no_exchange",
-                "description": "Decide to stay at Chalmers and focus on building deeper connections locally and with research groups",
-                "character_implication": "strengthens local network, gets more involved in Chalmers research, maintains stability in relationships and familiar environment"
-            }
-        ]
-        
-        return {
-            "type": "exchange_decision",
-            "title": f"International Exchange Opportunity - Year {profile.year}",
-            "situation": situation,
-            "options": options,
-            "metadata": {
-                "exchange_year": profile.year,
-                "exchange_info": exchange_info
-            }
-        }
-
-    def create_masters_selection_scenario(self, profile: PlayerProfile) -> Dict[str, Any]:
-        """Create a master's program selection scenario using centralized mapping"""
-        
-        try:
-            # Get the student's bachelor program code
-            program_code = profile.program
-            
-            # Get available master's programs using centralized service
-            available_masters = program_mapping.get_available_masters_for_bachelor(program_code)
-            
-            if not available_masters:
-                logger.warning(f"No master's programs found for bachelor program: {program_code}")
-                return self._create_ai_crash_fallback(profile)
-            
-            # Limit to 6 options to avoid overwhelming UI
-            master_programs = available_masters[:6]
-            
-            # Get bachelor program info for the situation text
-            bachelor_info = program_mapping.get_bachelor_program_info(program_code)
-            
-            # Create the situation text
-            situation_text = f"""
-            Congratulations {profile.name}! You've successfully completed your bachelor's degree in {bachelor_info['name']}.
-            
-            Now it's time to choose your master's specialization - a decision that will shape your expertise and career path. 
-            Based on your background in {bachelor_info['name']}, you have access to {len(available_masters)} excellent master's programs at Chalmers.
-            
-            Each program offers unique opportunities for advanced study, research, and industry connections. 
-            Consider your interests, career goals, and the skills you want to develop over the next two years.
-            
-            Your choice here will determine your courses, thesis project, and the specialized knowledge you'll graduate with.
-            """.strip()
-            
-            # Create options for each available master's program
-            options = []
-            for program in master_programs:
-                options.append({
-                    "id": f"masters_{program['code']}",
-                    "description": f"Specialize in {program['name']} ({program['code']})",
-                    "character_implication": f"becomes an expert in {program['name'].lower()}, gaining deep knowledge in {program['description']}"
-                })
-            
-            # Add an option to explore more if there are many programs available
-            if len(available_masters) > 6:
-                options.append({
-                    "id": "masters_explore",
-                    "description": f"Explore more master's programs (you have {len(available_masters)} total options available)",
-                    "character_implication": "takes a thoughtful approach to major decisions, carefully researching all available options"
-                })
-            
-            return {
-                "type": "masters_selection",
-                "title": f"🎓 Master's Program Selection - Year {profile.year}",
-                "situation": situation_text,
-                "options": options,
-                "metadata": {
-                    "bachelor_program": program_code,
-                    "available_programs": master_programs,
-                    "selection_year": profile.year
-                }
-            }
-            
-        except Exception as e:
-            logger.error(f"Error creating master's selection scenario: {e}")
-            return self._create_ai_crash_fallback(profile)
-
-    def decide_next_scenario(self, profile: PlayerProfile) -> Dict[str, Any]:
-        """Main scenario decision method - keep your existing logic but update tool calls"""
+    def decide_next_scenario(self, profile: Any) -> Dict[str, Any]:
+        """Enhanced scenario decision with simplified unified approach"""
         
         # Add recursion prevention
         if hasattr(self, '_generating_scenario') and self._generating_scenario:
@@ -1287,7 +1110,7 @@ class GameDirector:
         
         try:
             # Get the session_id from the request context or use default
-            session_id = getattr(request, 'json', {}).get('session_id', 'default') if request else 'default'
+            session_id = getattr(request, 'json', {}).get('session_id', 'default') if 'request' in globals() else 'default'
             
             # Start debug tracking
             debug_logger.start_scenario_generation(session_id, profile)
@@ -1299,106 +1122,20 @@ class GameDirector:
             if year_advanced:
                 logger.info(f"📅 Student advanced to Year {profile.year}")
             
-            # Check if we should trigger master's selection
-            if self.should_trigger_masters_selection(profile):
-                logger.info("🎓 TRIGGERING MASTER'S PROGRAM SELECTION (Year 3 -> Year 4 transition)")
-                scenario = self.create_masters_selection_scenario(profile)
-                debug_logger.complete_scenario_generation(scenario, True, total_time=0.0)
-                return scenario
+            # STEP 1: DETERMINE SCENARIO TYPE
+            choices_count = len(profile.life_choices)
+            scenario_type = self._determine_scenario_type(profile, choices_count)
             
-            # Check if we should trigger exchange scenario (master's years only, 50% chance)
-            if self.should_trigger_exchange_scenario(profile):
-                logger.info(f"✈️ TRIGGERING EXCHANGE SCENARIO (Year {profile.year}, master's program)")
-                scenario = self.create_exchange_scenario(profile)
-                debug_logger.complete_scenario_generation(scenario, True, total_time=0.0)
-                return scenario
+            logger.info(f"🎯 SCENARIO TYPE: {scenario_type}")
             
-            if not self.llm:
-                logger.warning("🎬 DIRECTOR: LLM not available, using fallback")
-                fallback_scenario = self._create_ai_crash_fallback(profile)
-                debug_logger.complete_scenario_generation(fallback_scenario, False, error="LLM not available")
-                return fallback_scenario
-
-            start_time = time.time()
+            # STEP 2: GENERATE SCENARIO
+            scenario = self._generate_scenario(profile, scenario_type)
             
-            # PHASE 1: Load director analysis prompt
-            logger.info("🎬 PHASE 1: Loading director analysis prompt...")
-            prompt_content = load_prompt(
-                'director_analysis',
-                student_name=profile.name,
-                program=profile.program,
-                year=profile.year,
-                program_explanation=GetProgramsExplanation.get_explanation(profile.program),
-                comprehensive_history=profile.comprehensive_history or "This is their first significant decision at university.",
-                personality_summary=profile.personality_summary or profile.personality_description,
-                tool_descriptions=self._get_tool_descriptions()
-            )
-            
-            if not prompt_content:
-                logger.error("🎬 PHASE 1: Director analysis prompt failed to load!")
-                fallback_scenario = self._create_ai_crash_fallback(profile)
-                debug_logger.complete_scenario_generation(fallback_scenario, False, error="Director analysis prompt failed")
-                return fallback_scenario
-            
-            # PHASE 2: Get AI analysis
-            logger.info("🎬 PHASE 2: Getting AI analysis...")
-            messages = [{"role": "user", "content": prompt_content}]
-            response = self._make_llm_call_with_retry(
-                messages, 
-                call_type="director_analysis",
-                prompt_name="director_analysis"
-            )
-            
-            if response is None:
-                logger.error("🎬 PHASE 2: AI analysis failed after all retries")
-                fallback_scenario = self._create_ai_crash_fallback(profile)
-                debug_logger.complete_scenario_generation(fallback_scenario, False, error="AI analysis failed after retries")
-                return fallback_scenario
-            
-            # Parse the response
-            analysis = self._parse_director_response(response)
-            
-            logger.info("🎬 DIRECTOR ANALYSIS:")
-            logger.info(f"   Reasoning: {analysis.get('analysis', 'No analysis provided')[:100]}...")
-            logger.info(f"   Scenario Type: {analysis.get('scenario_type', 'unknown')}")
-            logger.info(f"   Tools Planned: {len(analysis.get('tools_to_use', []))} tools")
-            
-            # PHASE 3: Execute the tools the AI requested
-            logger.info("🎬 PHASE 3: Executing requested tools...")
-            tool_results = {}
-            
-            for i, tool_call in enumerate(analysis.get('tools_to_use', []), 1):
-                logger.info(f"🎬 TOOL {i}/{len(analysis.get('tools_to_use', []))}: {tool_call}")
-                tool_name = self._parse_tool_call(tool_call)
-                if tool_name and tool_name in self.tools:
-                    tool_results[tool_name] = self._execute_tool(tool_name, profile)
-                else:
-                    logger.warning(f"   → Tool not found or could not parse: {tool_call}")
-            
-            logger.info(f"🎬 PHASE 4: Creating scenario with {len(tool_results)} tool results...")
-            
-            # PHASE 4: Create the actual scenario
-            scenario = self._create_scenario_with_context_retry(
-                profile, 
-                analysis.get('scenario_type', 'general'),
-                analysis.get('analysis', ''),
-                tool_results
-            )
-            
-            total_time = time.time() - start_time
-            
-            # Complete debug tracking
-            debug_logger.complete_scenario_generation(
-                final_scenario=scenario,
-                success=True,
-                total_time=total_time
-            )
-            
-            logger.info(f"🎬 DIRECTOR COMPLETE: Generated scenario '{scenario.get('title', 'Unknown')}' with {len(scenario.get('options', []))} options")
-            
+            debug_logger.complete_scenario_generation(scenario, True, total_time=0.0)
             return scenario
             
         except Exception as e:
+            start_time = time.time()  # Define start_time for the error case
             total_time = time.time() - start_time if 'start_time' in locals() else 0.0
             
             debug_logger.complete_scenario_generation(
@@ -1417,7 +1154,251 @@ class GameDirector:
             # Always clear the recursion flag
             self._generating_scenario = False
 
-    def _create_ai_crash_fallback(self, profile: PlayerProfile) -> Dict[str, Any]:
+    def _determine_scenario_type(self, profile: Any, choices_count: int) -> str:
+        """STEP 1: Determine what type of scenario to create"""
+        
+        # MOTTAGNING - First choice of Year 1 (0 choices)
+        if choices_count == 0 and profile.year == 1:
+            logger.info("🎉 SCENARIO TYPE: Mottagning (First choice of Year 1)")
+            return "mottagning"
+        
+        # Master's program selection (after 5 choices = end of year 3)
+        if choices_count == 5 and not profile.selected_masters_program:
+            logger.info("🎓 SCENARIO TYPE: Master's Program Selection (5 choices)")
+            return "masters_selection"
+        
+        # Exchange opportunity (50% chance at 6 or 8 choices during master's)
+        if choices_count in [6, 8] and profile.year >= 4 and not self._has_done_exchange(profile):
+            if self._roll_exchange_chance(profile, choices_count):
+                logger.info(f"✈️ SCENARIO TYPE: Exchange (50% chance at {choices_count} choices)")
+                return "exchange"
+        
+        # Thesis project selection (at 9 choices = mid year 5)
+        if choices_count == 9 and not self._has_done_thesis(profile):
+            logger.info("📝 SCENARIO TYPE: Thesis Project Selection (9 choices)")
+            return "thesis"
+        
+        # Career preparation (at 10 choices = late year 5)
+        if choices_count == 10:
+            logger.info("💼 SCENARIO TYPE: Career Preparation (10 choices)")
+            return "career"
+        
+        # Graduation scenario (at 11+ choices)
+        if choices_count >= 11:
+            logger.info("🎓 SCENARIO TYPE: Graduation (11+ choices)")
+            return "graduation"
+        
+        # DEFAULT: Generate AI-driven scenario for regular choices
+        logger.info(f"🤖 SCENARIO TYPE: Standard AI (default for {choices_count} choices)")
+        return "standard"
+
+    def _generate_scenario(self, profile: Any, scenario_type: str) -> Dict[str, Any]:
+        """STEP 2: Generate the scenario based on type - UNIFIED WORKFLOW"""
+        
+        if not self.llm:
+            logger.warning(f"🎬 LLM not available for {scenario_type}, using fallback")
+            return self._create_ai_crash_fallback(profile)
+        
+        try:
+            start_time = time.time()
+            
+            # STEP 2.5: Get tools and prompt for this scenario type
+            tools_to_use, prompt_name = self._get_scenario_config(scenario_type)
+            
+            logger.info(f"🎬 SCENARIO CONFIG: prompt='{prompt_name}', tools={tools_to_use}")
+            
+            # STEP 3: Execute tools
+            tool_results = self._execute_tools(tools_to_use, profile)
+            
+            # STEP 2 (continued): Get high-level analysis
+            analysis = self._get_scenario_analysis(profile, prompt_name)
+            
+            # STEP 4: Generate scenario (ALWAYS using the same code)
+            scenario = self._create_scenario_with_context_retry(
+                profile, 
+                analysis.get('scenario_type', 'general'),
+                analysis.get('analysis', ''),
+                tool_results
+            )
+            
+            total_time = time.time() - start_time
+            
+            debug_logger.complete_scenario_generation(
+                final_scenario=scenario,
+                success=True,
+                total_time=total_time
+            )
+            
+            logger.info(f"🎬 SCENARIO COMPLETE: '{scenario.get('title', 'Unknown')}' with {len(scenario.get('options', []))} options")
+            return scenario
+            
+        except Exception as e:
+            logger.error(f"🎬 Error generating {scenario_type} scenario: {e}")
+            return self._create_ai_crash_fallback(profile)
+
+    def _get_scenario_config(self, scenario_type: str) -> Tuple[List[str], str]:
+        """STEP 2.5: Get tools and prompt name for each scenario type"""
+        
+        scenario_configs = {
+            "mottagning": (["studies"], "mottagning_analysis"),
+            "masters_selection": ([], "masters_introduction_analysis"),
+            "exchange": (["exchange"], "exchange_analysis"),
+            "thesis": (["studies", "courses"], "thesis_analysis"),
+            "career": ([], "career_analysis"),
+            "graduation": ([], "graduation_analysis"),
+            "standard": (None, "director_analysis")  # Special case - AI decides tools
+        }
+        
+        return scenario_configs.get(scenario_type, ([], "director_analysis"))
+
+    def _execute_tools(self, tools_to_use: List[str], profile: Any) -> Dict[str, str]:
+        """STEP 3: Execute the tools"""
+        
+        if tools_to_use is None:
+            # Special case for standard scenarios - let AI decide tools
+            return self._execute_ai_chosen_tools(profile)
+        
+        # Execute hardcoded tools
+        tool_results = {}
+        for tool_name in tools_to_use:
+            if tool_name in self.tools:
+                tool_results[tool_name] = self._execute_tool(tool_name, profile)
+            else:
+                logger.warning(f"   → Tool not found: {tool_name}")
+        
+        logger.info(f"🔧 TOOLS EXECUTED: {len(tool_results)} tools completed")
+        return tool_results
+
+    def _execute_ai_chosen_tools(self, profile: Any) -> Dict[str, str]:
+        """Execute tools chosen by AI analysis (for standard scenarios)"""
+        
+        logger.info("🤖 AI TOOL SELECTION: Getting AI analysis for tool selection...")
+        
+        # Get AI analysis to determine tools
+        prompt_content = load_prompt(
+            'director_analysis',
+            student_name=profile.name,
+            program=profile.program,
+            year=profile.year,
+            program_explanation=GetProgramsExplanation.get_explanation(profile.program),
+            comprehensive_history=profile.comprehensive_history or "This is their first significant decision at university.",
+            personality_summary=profile.personality_summary or profile.personality_description,
+            tool_descriptions=self._get_tool_descriptions()
+        )
+        
+        if not prompt_content:
+            logger.error("🤖 AI TOOL SELECTION: Director analysis prompt failed to load!")
+            return {}
+        
+        # Make AI call to get tool selection
+        messages = [{"role": "user", "content": prompt_content}]
+        response = self._make_llm_call_with_retry(
+            messages, 
+            call_type="director_analysis",
+            prompt_name="director_analysis"
+        )
+        
+        if response is None:
+            logger.error("🤖 AI TOOL SELECTION: AI analysis failed")
+            return {}
+        
+        # Parse AI response to get tools
+        analysis = self._parse_director_response(response)
+        
+        logger.info("🤖 AI ANALYSIS:")
+        logger.info(f"   Reasoning: {analysis.get('analysis', 'No analysis provided')[:100]}...")
+        logger.info(f"   Tools Planned: {len(analysis.get('tools_to_use', []))} tools")
+        
+        # Execute the tools AI requested
+        tool_results = {}
+        for i, tool_call in enumerate(analysis.get('tools_to_use', []), 1):
+            logger.info(f"🔧 AI TOOL {i}/{len(analysis.get('tools_to_use', []))}: {tool_call}")
+            tool_name = self._parse_tool_call(tool_call)
+            if tool_name and tool_name in self.tools:
+                tool_results[tool_name] = self._execute_tool(tool_name, profile)
+            else:
+                logger.warning(f"   → Tool not found or could not parse: {tool_call}")
+        
+        # Store analysis for later use
+        self._current_ai_analysis = analysis
+        
+        return tool_results
+
+    def _get_scenario_analysis(self, profile: Any, prompt_name: str) -> Dict[str, Any]:
+        """Get high-level analysis for scenario creation"""
+        
+        if prompt_name == "director_analysis":
+            # For standard scenarios, we already have the analysis
+            return getattr(self, '_current_ai_analysis', {
+                'analysis': 'Standard scenario analysis',
+                'scenario_type': 'general'
+            })
+        else:
+            # For specific scenarios, get analysis from the specific prompt
+            logger.info(f"🎬 Getting analysis from {prompt_name}")
+            
+            try:
+                analysis_prompt_content = load_prompt(
+                    prompt_name,
+                    student_name=profile.name,
+                    program=profile.program,
+                    year=profile.year,
+                    program_explanation=GetProgramsExplanation.get_explanation(profile.program),
+                    comprehensive_history=profile.comprehensive_history or "This is their first significant decision at university.",
+                    personality_summary=profile.personality_summary or profile.personality_description,
+                    masters_program=profile.selected_masters_program or "their chosen specialization",
+                    available_masters=self._get_available_masters_list(profile.program)
+                )
+                
+                if not analysis_prompt_content:
+                    logger.error(f"🎬 ERROR: Analysis prompt content is empty for {prompt_name}!")
+                    return {'analysis': 'Analysis failed', 'scenario_type': 'general'}
+                
+                # Make LLM call for analysis
+                messages = [{"role": "user", "content": analysis_prompt_content}]
+                analysis_response = self._make_llm_call_with_retry(
+                    messages, 
+                    call_type=f"{prompt_name}_analysis",
+                    prompt_name=prompt_name
+                )
+                
+                if analysis_response is None:
+                    logger.error(f"🎬 {prompt_name.upper()}: Analysis failed after all retries")
+                    return {'analysis': 'Analysis failed', 'scenario_type': 'general'}
+                
+                # Parse the analysis response
+                analysis = self._parse_director_response(analysis_response)
+                
+                logger.info(f"🎬 ANALYSIS COMPLETE:")
+                logger.info(f"   Analysis: {analysis.get('analysis', 'No analysis provided')[:100]}...")
+                logger.info(f"   Scenario Type: {analysis.get('scenario_type', 'unknown')}")
+                
+                return analysis
+                
+            except Exception as e:
+                logger.error(f"🎬 Error getting analysis from {prompt_name}: {e}")
+                return {'analysis': 'Analysis failed', 'scenario_type': 'general'}
+
+    def _get_available_masters_list(self, program_code: str) -> str:
+        """Get a formatted list of available master's programs for prompts"""
+        try:
+            available_masters = program_mapping.get_available_masters_for_bachelor(program_code)
+            if available_masters:
+                return ', '.join([f"{m['name']} ({m['code']})" for m in available_masters[:8]])
+            return "No master's programs available"
+        except:
+            return "Master's programs information not available"
+
+    def _get_tool_descriptions(self) -> str:
+        """Get descriptions of all available tools for LLM prompts"""
+        descriptions = []
+        for tool_name, tool in self.tools.items():
+            description = tool.__class__.__doc__ or f"Tool for {tool_name}"
+            descriptions.append(f"- {tool_name}: {description.strip()}")
+        
+        return "\n".join(descriptions)
+
+    def _create_ai_crash_fallback(self, profile: Any) -> Dict[str, Any]:
         """Create a humorous fallback when the AI has completely crashed"""
         
         crash_situations = [
@@ -1548,7 +1529,7 @@ class GameDirector:
         
         return tool_name
     
-    def _create_scenario_with_context_retry(self, profile: PlayerProfile, scenario_type: str, analysis: str, tool_results: Dict[str, str]) -> Dict[str, Any]:
+    def _create_scenario_with_context_retry(self, profile: Any, scenario_type: str, analysis: str, tool_results: Dict[str, str]) -> Dict[str, Any]:
         """Create the final scenario using AI with context from tools"""
         
         logger.info("🎬 PHASE 5: Creating final scenario with AI...")
@@ -1648,6 +1629,25 @@ class GameDirector:
             
             # Return empty dict to signal failure
             return {}
+
+    # HELPER METHODS
+    def _has_done_exchange(self, profile: Any) -> bool:
+        """Check if student has already done exchange"""
+        exchange_keywords = ['exchange', 'abroad', 'international', 'erasmus']
+        return any(any(keyword in choice.lower() for keyword in exchange_keywords) 
+                   for choice in profile.life_choices)
+
+    def _has_done_thesis(self, profile: Any) -> bool:
+        """Check if student has already done thesis project"""
+        thesis_keywords = ['thesis', 'dissertation', 'research project', 'final project']
+        return any(any(keyword in choice.lower() for keyword in thesis_keywords) 
+                   for choice in profile.life_choices)
+
+    def _roll_exchange_chance(self, profile: Any, choices_count: int) -> bool:
+        """50% chance for exchange, using student name + choices as seed for consistency"""
+        import hashlib
+        seed = hashlib.md5(f"{profile.name}_exchange_{choices_count}".encode()).hexdigest()
+        return int(seed[:8], 16) % 2 == 0
 
 # ==================== GLOBAL INSTANCES ====================
 
@@ -2229,51 +2229,102 @@ def debug_ai_process():
 
 @app.route('/api/debug/quick_setups', methods=['GET'])
 def debug_quick_setups():
-    """Get predefined quick setups for jumping to different game states"""
+    """Get predefined quick setups with exact choice targeting"""
     try:
         quick_setups = {
-            "early_year_2": {
-                "description": "Early Year 2 Student",
-                "year": 2,
-                "choices": [
-                    "Academic Focus: Joined study groups to improve grades",
-                    "Social Growth: Attended Chalmers welcome events"
-                ]
-            },
-            "mid_year_3": {
-                "description": "Mid Year 3 Student",
+            "pre_masters": {
+                "description": "Pre-Master's Selection (4 choices, Year 3)",
                 "year": 3,
                 "choices": [
-                    "Academic Focus: Completed advanced programming courses",
-                    "Social Growth: Joined student section activities",
-                    "Career Prep: Started looking into internship opportunities",
-                    "Technical Skills: Participated in hackathon competition"
+                    "Academic Focus: Completed core engineering courses with high grades",
+                    "Social Growth: Joined student section and made lasting friendships", 
+                    "Technical Skills: Participated in programming competitions",
+                    "Career Prep: Completed summer internship at local tech company"
                 ]
             },
-            "year_4_masters": {
-                "description": "Year 4 - Master's Program",
+            "trigger_masters": {
+                "description": "Trigger Master's Selection (5 choices, Year 3)",
+                "year": 3,
+                "choices": [
+                    "Academic Focus: Excelled in fundamental engineering courses",
+                    "Social Growth: Became active in student organizations",
+                    "Technical Skills: Developed strong programming skills",
+                    "Career Prep: Explored different career paths through internships",
+                    "Academic Achievement: Maintained high GPA and research interests"
+                ]
+            },
+            "trigger_exchange_6": {
+                "description": "Trigger Exchange at 6 choices (Year 4)",
                 "year": 4,
                 "choices": [
-                    "Academic Focus: Excelled in core engineering courses",
-                    "Social Growth: Became active in student organizations",
-                    "Career Prep: Completed summer internship at tech company",
-                    "Technical Skills: Led group project development",
-                    "Masters Selection: Selected advanced master's program",
-                    "Research Focus: Started working with research group"
+                    "Academic Focus: Completed bachelor's with excellent results",
+                    "Social Growth: Built strong network at Chalmers",
+                    "Technical Skills: Specialized in chosen field",
+                    "Career Prep: Gained industry experience",
+                    "Masters Selection: Chose advanced master's program",
+                    "Research Focus: Started master's level coursework"
                 ]
             },
-            "final_year": {
-                "description": "Final Year Student",
+            "trigger_exchange_8": {
+                "description": "Trigger Exchange at 8 choices (Year 4)", 
+                "year": 4,
+                "choices": [
+                    "Academic Focus: Completed bachelor's degree successfully",
+                    "Social Growth: Developed leadership skills in student section",
+                    "Technical Skills: Mastered core technical competencies", 
+                    "Career Prep: Built professional network through internships",
+                    "Masters Selection: Selected specialized master's program",
+                    "Research Focus: Engaged with advanced research topics",
+                    "Academic Excellence: Achieved outstanding results in master's courses",
+                    "Professional Development: Gained deeper industry insights"
+                ]
+            },
+            "trigger_thesis": {
+                "description": "Trigger Thesis Selection (9 choices, Year 5)",
                 "year": 5,
                 "choices": [
-                    "Academic Focus: Maintained high GPA throughout studies",
-                    "Social Growth: Organized events for student section",
-                    "Career Prep: Secured multiple job offers",
-                    "Technical Skills: Completed advanced thesis project",
-                    "Masters Selection: Specialized in chosen field",
-                    "Research Focus: Published research paper",
-                    "Exchange Experience: Completed semester abroad",
-                    "Industry Connection: Networked with industry professionals"
+                    "Academic Focus: Excellence throughout undergraduate studies",
+                    "Social Growth: Leadership roles in student community",
+                    "Technical Skills: Advanced technical expertise",
+                    "Career Prep: Strong industry connections",
+                    "Masters Selection: Specialized master's program",
+                    "Research Focus: Deep research engagement", 
+                    "Academic Achievement: Outstanding master's coursework",
+                    "Professional Growth: Industry collaboration experience",
+                    "Research Excellence: Ready for thesis-level work"
+                ]
+            },
+            "trigger_career": {
+                "description": "Trigger Career Preparation (10 choices, Year 5)",
+                "year": 5,
+                "choices": [
+                    "Academic Focus: Maintained excellence throughout studies",
+                    "Social Growth: Strong leadership and community involvement",
+                    "Technical Skills: Expert-level technical competencies",
+                    "Career Prep: Extensive industry network and experience",
+                    "Masters Selection: Advanced specialization completed",
+                    "Research Focus: Significant research contributions",
+                    "Academic Achievement: Top-tier academic performance",
+                    "Professional Growth: Industry mentorship and guidance",
+                    "Research Excellence: Thesis project well underway",
+                    "Career Readiness: Prepared for professional transition"
+                ]
+            },
+            "trigger_graduation": {
+                "description": "Trigger Graduation (11+ choices, Year 5)",
+                "year": 5,
+                "choices": [
+                    "Academic Focus: Consistently high academic performance",
+                    "Social Growth: Extensive leadership and community impact",
+                    "Technical Skills: Industry-ready technical expertise",
+                    "Career Prep: Multiple career opportunities secured",
+                    "Masters Selection: Specialized expertise fully developed",
+                    "Research Focus: Published research and thesis completion",
+                    "Academic Achievement: Recognition for academic excellence",
+                    "Professional Growth: Strong industry relationships",
+                    "Research Excellence: Thesis defense preparation",
+                    "Career Readiness: Job offers and career planning",
+                    "Final Preparations: Ready for graduation and next chapter"
                 ]
             }
         }
@@ -2285,7 +2336,7 @@ def debug_quick_setups():
     except Exception as e:
         logger.error(f"Error getting quick setups: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
-
+    
 @app.route('/api/debug/apply_quick_setup', methods=['POST'])
 def debug_apply_quick_setup():
     """Apply a predefined quick setup to a session"""
@@ -2295,7 +2346,7 @@ def debug_apply_quick_setup():
         setup_name = data.get('setup_name')
         
         if not setup_name:
-            return jsonify({"success": False, "error": "Setup name is required"}), 400
+            return jsonify({"success": False, "error": "setup_name is required"}), 400
         
         # Get the quick setup data
         quick_setups_response = debug_quick_setups()
@@ -2329,9 +2380,73 @@ def debug_jump_to_state():
     except Exception as e:
         logger.error(f"Error jumping to state: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
+    
+def calculate_choices_for_year(target_year):
+    """Calculate how many choices should be made by a certain year"""
+    # Year progression: 2 choices per year, starting from 0
+    # Year 1: 0-1 choices
+    # Year 2: 2-3 choices  
+    # Year 3: 4-5 choices (master's selection at 5)
+    # Year 4: 6-7 choices (exchange at 6 or 8)
+    # Year 5: 8+ choices
+    
+    if target_year <= 1:
+        return 1  # Early year 1
+    elif target_year == 2:
+        return 3  # Mid year 2
+    elif target_year == 3:
+        return 4  # Pre-master's selection
+    elif target_year == 4:
+        return 7  # Post-master's, pre/post-exchange
+    elif target_year >= 5:
+        return 9  # Year 5+
+    
+    return (target_year - 1) * 2 + 1
+
+def generate_fake_choices_for_gap(choices_needed, year, program):
+    """Generate realistic fake choices to fill the gap"""
+    
+    fake_choice_templates = {
+        1: [
+            "Social Growth: Attended Chalmers welcome week events",
+            "Academic Focus: Joined study groups for challenging courses",
+        ],
+        2: [
+            "Technical Skills: Completed introductory programming projects",
+            "Social Growth: Became active in student section activities",
+        ],
+        3: [
+            "Academic Focus: Excelled in advanced engineering courses", 
+            "Career Prep: Started exploring internship opportunities",
+        ],
+        4: [
+            "Technical Skills: Led group project in specialized area",
+            "Research Focus: Began working with research groups",
+        ],
+        5: [
+            "Career Prep: Secured industry connections",
+            "Research Focus: Made progress on thesis project",
+        ]
+    }
+    
+    # Get appropriate templates for the year
+    templates = fake_choice_templates.get(year, fake_choice_templates[3])
+    
+    # Cycle through templates if we need more choices than templates
+    fake_choices = []
+    for i in range(choices_needed):
+        template = templates[i % len(templates)]
+        
+        # Add some variation
+        if i >= len(templates):
+            template = template.replace(":", f" (Advanced):", 1)
+        
+        fake_choices.append(template)
+    
+    return fake_choices
 
 def debug_jump_to_state_internal(session_id, year, choices):
-    """Internal function to jump to a specific game state"""
+    """Internal function to jump to a specific game state with proper choice history"""
     try:
         # Create or get the session
         if session_id not in game_sessions:
@@ -2349,8 +2464,26 @@ def debug_jump_to_state_internal(session_id, year, choices):
         profile.current_situation = f"starting their studies in year {year}"
         profile.year = year
         
-        # Add the choices
-        for i, choice in enumerate(choices):
+        # Calculate target choices needed for this year
+        target_choices = calculate_choices_for_year(year)
+        
+        # If user provided choices, use them
+        provided_choices = [choice.strip() for choice in choices if choice.strip()]
+        
+        # If we need more choices than provided, generate fake ones
+        if len(provided_choices) < target_choices:
+            fake_choices = generate_fake_choices_for_gap(
+                target_choices - len(provided_choices), 
+                year, 
+                profile.program
+            )
+            all_choices = provided_choices + fake_choices
+        else:
+            # Use only the first target_choices if too many provided
+            all_choices = provided_choices[:target_choices]
+        
+        # Add all choices
+        for i, choice in enumerate(all_choices):
             if choice.strip():
                 # Parse choice format "Type: Description"
                 if ':' in choice:
@@ -2371,19 +2504,20 @@ def debug_jump_to_state_internal(session_id, year, choices):
                         'options': []
                     }
                 )
-                
-                # Update personality
-                profile.personality_description = f"A student who has focused on {choice_type.lower()} and {description.lower()}"
         
-        # Force set the year (in case choice count would calculate differently)
+        # Force set the year and choices count
         profile.year = year
         
-        # Update summaries if LLM is available
-        if llm and choices:
+        # Update master's program if we're in year 4+
+        if year >= 4 and not profile.selected_masters_program:
+            profile.selected_masters_program = "Computer Science and Engineering (Master's)"
+        
+        # Update profile summaries if LLM is available
+        if llm and all_choices:
             try:
                 profile_service = ProfileUpdateService(llm)
                 # Use the last choice for summary update
-                last_choice = choices[-1] if choices else "General: Started studies"
+                last_choice = all_choices[-1] if all_choices else "General: Started studies"
                 if ':' in last_choice:
                     choice_type, description = last_choice.split(':', 1)
                 else:
@@ -2393,7 +2527,7 @@ def debug_jump_to_state_internal(session_id, year, choices):
                     'choice_description': description.strip(),
                     'choice_type': choice_type.strip(),
                     'situation': f"Jumping to year {year} state",
-                    'character_implication': f"Represents cumulative growth through {len(choices)} choices",
+                    'character_implication': f"Represents cumulative growth through {len(all_choices)} choices",
                     'other_options': []
                 }
                 
@@ -2401,19 +2535,75 @@ def debug_jump_to_state_internal(session_id, year, choices):
             except Exception as e:
                 logger.warning(f"Could not update profile summaries: {e}")
         
-        logger.info(f"🐛 DEBUG: Jumped session {session_id} to year {year} with {len(choices)} choices")
+        logger.info(f"🐛 DEBUG: Jumped session {session_id} to year {year} with {len(all_choices)} choices")
         
         return jsonify({
             "success": True,
-            "message": f"Jumped to Year {year} with {len(choices)} choices",
+            "message": f"Jumped to Year {year} with {len(all_choices)} choices",
             "profile": profile.to_dict(),
-            "session_id": session_id
+            "session_id": session_id,
+            "debug_info": {
+                "target_choices": target_choices,
+                "provided_choices": len(provided_choices),
+                "fake_choices_added": len(all_choices) - len(provided_choices),
+                "choices_breakdown": all_choices
+            }
         })
         
     except Exception as e:
         logger.error(f"Error in jump_to_state_internal: {e}")
         import traceback
         logger.error(f"Traceback: {traceback.format_exc()}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/api/debug/scenario_triggers', methods=['GET'])
+def debug_scenario_triggers():
+    """Get information about when different scenarios trigger"""
+    try:
+        return jsonify({
+            "success": True,
+            "scenario_triggers": {
+                "masters_selection": {
+                    "condition": "choices_count == 5 AND not profile.selected_masters_program",
+                    "description": "Triggers at exactly 5 choices during Year 3 transition",
+                    "debug_setup": "trigger_masters"
+                },
+                "exchange_opportunity": {
+                    "condition": "choices_count in [6, 8] AND profile.year >= 4 AND not _has_done_exchange() AND 50% chance",
+                    "description": "50% chance to trigger at 6 or 8 choices during master's years",
+                    "debug_setups": ["trigger_exchange_6", "trigger_exchange_8"]
+                },
+                "thesis_selection": {
+                    "condition": "choices_count == 9 AND not _has_done_thesis()",
+                    "description": "Triggers at exactly 9 choices during Year 5",
+                    "debug_setup": "trigger_thesis"
+                },
+                "career_preparation": {
+                    "condition": "choices_count == 10",
+                    "description": "Triggers at exactly 10 choices during late Year 5",
+                    "debug_setup": "trigger_career"
+                },
+                "graduation": {
+                    "condition": "choices_count >= 11",
+                    "description": "Triggers at 11+ choices for graduation celebration",
+                    "debug_setup": "trigger_graduation"
+                },
+                "ai_generated": {
+                    "condition": "All other cases",
+                    "description": "Default AI-generated scenarios for regular choices",
+                    "debug_setup": "Any setup with different choice counts"
+                }
+            },
+            "year_progression": {
+                "year_1": "0-1 choices",
+                "year_2": "2-3 choices", 
+                "year_3": "4-5 choices (master's selection at 5)",
+                "year_4": "6-7 choices (exchange possible at 6 or 8)",
+                "year_5": "8+ choices (thesis at 9, career at 10, graduation at 11+)"
+            }
+        })
+    except Exception as e:
+        logger.error(f"Error getting scenario triggers: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
 
 # ==================== MAIN ====================
