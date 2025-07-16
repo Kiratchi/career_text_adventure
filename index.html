@@ -114,7 +114,392 @@
             background: #a1a1a1;
         }
 
-        /* New styling for choice containers */
+        /* Enhanced Program Selection Modal Styles */
+        .program-selection-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            z-index: 10000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            box-sizing: border-box;
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        .program-selection-modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 20px;
+            width: 100%;
+            max-width: 1400px;
+            height: 90vh;
+            overflow: hidden;
+            position: relative;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .modal-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .modal-header h2 {
+            font-size: 1.8rem;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .modal-close {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.4rem;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        .modal-close:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.1);
+        }
+
+        .modal-body {
+            flex: 1;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .program-selection-container {
+            padding: 30px;
+            flex: 1;
+            overflow-y: auto;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 50%, #f8f9fa 100%);
+        }
+
+        .selection-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .selection-header h3 {
+            font-size: 1.8rem;
+            color: #4a5568;
+            margin-bottom: 15px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .selection-header p {
+            color: #6c757d;
+            font-size: 1.1rem;
+            line-height: 1.7;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .search-container {
+            position: relative;
+            margin-bottom: 30px;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 15px 50px 15px 20px;
+            border: 2px solid #e9ecef;
+            border-radius: 25px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.9);
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            background: white;
+        }
+
+        .search-icon {
+            position: absolute;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #6c757d;
+            font-size: 1.2rem;
+        }
+
+        .programs-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        .program-card {
+            background: rgba(255, 255, 255, 0.95);
+            border: 2px solid #e9ecef;
+            border-radius: 20px;
+            padding: 30px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+        }
+
+        .program-card:hover {
+            border-color: #667eea;
+            background: rgba(240, 244, 255, 0.95);
+            transform: translateY(-5px);
+            box-shadow: 0 12px 35px rgba(102, 126, 234, 0.25);
+        }
+
+        .program-card.selected {
+            border-color: #667eea;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.1) 100%);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.35);
+        }
+
+        .program-card.selected::before {
+            content: '✓';
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: #28a745;
+            color: white;
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.3rem;
+            animation: checkmark 0.3s ease-in;
+        }
+
+        @keyframes checkmark {
+            from { transform: scale(0); }
+            to { transform: scale(1); }
+        }
+
+        .program-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #495057;
+            margin-bottom: 15px;
+            line-height: 1.3;
+            padding-right: 50px;
+        }
+
+        .program-code {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #667eea;
+            background: rgba(102, 126, 234, 0.1);
+            padding: 4px 8px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            display: inline-block;
+        }
+
+        .program-description {
+            color: #6c757d;
+            font-size: 0.95rem;
+            line-height: 1.6;
+            margin-bottom: 20px;
+            display: -webkit-box;
+            -webkit-line-clamp: 4;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .program-keywords {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        .program-keyword {
+            background: rgba(102, 126, 234, 0.1);
+            color: #667eea;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .program-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #e9ecef;
+        }
+
+        .learn-more {
+            color: #667eea;
+            font-size: 0.9rem;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        .learn-more:hover {
+            text-decoration: underline;
+            color: #5a6fd8;
+        }
+
+        .no-results {
+            text-align: center;
+            padding: 60px 20px;
+            color: #6c757d;
+            grid-column: 1 / -1;
+        }
+
+        .no-results h3 {
+            font-size: 1.5rem;
+            margin-bottom: 15px;
+            color: #495057;
+        }
+
+        .no-results p {
+            font-size: 1.1rem;
+            margin-bottom: 20px;
+        }
+
+        .clear-search-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .clear-search-btn:hover {
+            background: #5a6fd8;
+            transform: translateY(-2px);
+        }
+
+        .selection-actions {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-top: 2px solid rgba(102, 126, 234, 0.2);
+            padding: 25px 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            flex-shrink: 0;
+        }
+
+        .selected-program-info {
+            background: linear-gradient(135deg, rgba(40, 167, 69, 0.1) 0%, rgba(34, 139, 34, 0.05) 100%);
+            border: 1px solid rgba(40, 167, 69, 0.3);
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            display: none;
+        }
+
+        .selected-program-info.active {
+            display: block;
+            animation: slideIn 0.3s ease-in;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .selected-program-name {
+            font-weight: 700;
+            color: #155724;
+            margin-bottom: 8px;
+            font-size: 1.1rem;
+        }
+
+        .selected-program-description {
+            color: #28a745;
+            font-size: 0.95rem;
+            line-height: 1.4;
+        }
+
+        .confirm-selection-btn {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            border: none;
+            padding: 18px 40px;
+            border-radius: 25px;
+            font-size: 1.2rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+            opacity: 0.5;
+            pointer-events: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin: 0 auto;
+            min-width: 280px;
+        }
+
+        .confirm-selection-btn.active {
+            opacity: 1;
+            pointer-events: auto;
+            animation: pulse 2s infinite;
+        }
+
+        .confirm-selection-btn.active:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(40, 167, 69, 0.4);
+            animation: none;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+        }
+
+        /* Choice option styles */
         .choice-container {
             background: white;
             border: 2px solid #e9ecef;
@@ -457,11 +842,6 @@
             animation: none;
         }
 
-        @keyframes pulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-        }
-
         /* Choice option styles */
         .choice-option {
             background: rgba(248, 249, 250, 0.9);
@@ -546,119 +926,6 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
-        .program-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-            gap: 20px;
-            margin: 30px 0;
-            max-height: 70vh;
-            overflow-y: auto;
-            padding: 10px;
-        }
-
-        .program-grid::-webkit-scrollbar {
-            width: 8px;
-        }
-
-        .program-grid::-webkit-scrollbar-track {
-            background: #f1f1f1;
-            border-radius: 10px;
-        }
-
-        .program-grid::-webkit-scrollbar-thumb {
-            background: #c1c1c1;
-            border-radius: 10px;
-        }
-
-        .program-card {
-            background: rgba(248, 249, 250, 0.95);
-            border: 2px solid #e9ecef;
-            border-radius: 15px;
-            padding: 25px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            text-align: left;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .program-card:hover {
-            border-color: #667eea;
-            background: rgba(240, 244, 255, 0.95);
-            transform: translateY(-3px);
-            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.2);
-        }
-
-        .program-card.selected {
-            border-color: #667eea;
-            background: linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.1) 100%);
-            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.3);
-        }
-
-        .program-title {
-            font-size: 1.1rem;
-            font-weight: 700;
-            color: #495057;
-            margin-bottom: 15px;
-            line-height: 1.3;
-        }
-
-        .program-description {
-            color: #6c757d;
-            font-size: 0.92rem;
-            line-height: 1.5;
-            margin-bottom: 15px;
-        }
-
-        .program-field {
-            background: rgba(102, 126, 234, 0.1);
-            color: #667eea;
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            font-weight: 600;
-            display: inline-block;
-            margin-bottom: 10px;
-        }
-
-        .program-keywords {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 6px;
-            margin-top: 10px;
-        }
-
-        .program-keyword {
-            background: rgba(108, 117, 125, 0.1);
-            color: #6c757d;
-            padding: 3px 8px;
-            border-radius: 12px;
-            font-size: 0.75rem;
-            font-weight: 500;
-        }
-
-        .program-search {
-            margin-bottom: 20px;
-            text-align: center;
-        }
-
-        .search-input {
-            width: 100%;
-            max-width: 400px;
-            padding: 12px 20px;
-            border: 2px solid #e9ecef;
-            border-radius: 25px;
-            font-size: 1rem;
-            transition: all 0.3s ease;
-            background: rgba(255, 255, 255, 0.9);
-        }
-
-        .search-input:focus {
-            outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-        }
-
         .year-advancement {
             background: linear-gradient(135deg, #28a745, #20c997);
             color: white;
@@ -685,8 +952,25 @@
                 padding: 15px;
             }
 
-            .program-grid {
+            .programs-grid {
                 grid-template-columns: 1fr;
+            }
+
+            .modal-content {
+                height: 95vh;
+                margin: 10px;
+            }
+
+            .modal-header {
+                padding: 20px;
+            }
+
+            .modal-header h2 {
+                font-size: 1.4rem;
+            }
+
+            .program-selection-container {
+                padding: 20px;
             }
         }
 
@@ -779,6 +1063,44 @@
         </main>
     </div>
 
+    <!-- Enhanced Program Selection Modal -->
+    <div class="program-selection-modal" id="programSelectionModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>🎓 Choose Your Engineering Program</h2>
+                <button class="modal-close" onclick="closeProgramSelection()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="program-selection-container">
+                    <div class="selection-header">
+                        <h3>Find Your Perfect Program</h3>
+                        <p id="selectionDescription">Explore all engineering programs at Chalmers. Each program offers unique opportunities and will shape your entire university experience. Use the search below to find the program that matches your interests and career goals.</p>
+                    </div>
+
+                    <div class="search-container">
+                        <input type="text" class="search-input" id="programSearchInput" placeholder="Search programs by name or keywords...">
+                        <span class="search-icon">🔍</span>
+                    </div>
+
+                    <div class="programs-grid" id="programsGrid">
+                        <!-- Programs will be populated here -->
+                    </div>
+                </div>
+
+                <div class="selection-actions">
+                    <div class="selected-program-info" id="selectedProgramInfo">
+                        <div class="selected-program-name" id="selectedProgramName"></div>
+                        <div class="selected-program-description" id="selectedProgramDescription"></div>
+                    </div>
+                    <button class="confirm-selection-btn" id="confirmSelectionBtn" onclick="confirmProgramSelection()">
+                        <span>Continue with Selected Program</span>
+                        <span>🚀</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         // Game state
         let gameState = {
@@ -787,6 +1109,7 @@
             player: {
                 name: '',
                 program: '',
+                programCode: '', // New field to store program code
                 year: 1,
                 selected_masters_program: '',
                 personality: 'is just starting their university journey',
@@ -800,106 +1123,135 @@
             choiceHistory: [] // Track all choices for display
         };
 
+        // Enhanced Program Selection State
+        let programSelectionState = {
+            selectedProgram: null,
+            selectedProgramCode: null, // New field for selected program code
+            filteredPrograms: [],
+            isOpen: false
+        };
+
         // API Configuration
         const API_BASE = 'http://localhost:5000/api';
 
-        // Complete Chalmers programs data from the JSON
-        const knowledgeData = {
-            programs: [
-                {
-                    name: "Architecture and Technology",
-                    description: "For those interested in mathematics and technology as well as spatial design and building arts.",
-                    field: "Architecture",
-                    keywords: ["architecture", "mathematics", "design"]
-                },
-                {
-                    name: "Automation and Mechatronics",
-                    description: "Self-driving cars, household robots and transport drones are soon here to stay. Drive the development of tomorrow's smart products and services.",
-                    field: "Automation and Mechatronics",
-                    keywords: ["automation", "electronics", "robotics", "programming"]
-                },
-                {
-                    name: "Biotechnology",
-                    description: "Connect the small cell to the large system to create tomorrow's food, medicine, fuel and materials.",
-                    field: "Chemical and Biotechnology",
-                    keywords: ["biology", "health", "food", "genetic engineering"]
-                },
-                {
-                    name: "Computer Science and Engineering",
-                    description: "Develop tools that meet important societal challenges, such as intelligent vehicle control, climate simulations and smart energy supply.",
-                    field: "Computer Science",
-                    keywords: ["computer science", "IT"]
-                },
-                {
-                    name: "Electrical Engineering",
-                    description: "Develop systems for health monitoring, reduce the risk of traffic accidents and much more. The rapid development of sensors in optical and wireless communication makes it possible.",
-                    field: "Electrical Engineering",
-                    keywords: ["electrical engineering", "production", "product development"]
-                },
-                {
-                    name: "Global Systems",
-                    description: "Tackle global sustainability challenges from a systems perspective and learn how these interact with society, technology and nature.",
-                    field: "Engineering Physics, Engineering Mathematics and Global Systems",
-                    keywords: ["physics", "mathematics", "sustainability"]
-                },
-                {
-                    name: "Industrial Engineering and Management",
-                    description: "Practice finding connections and methods for analyzing technology and economics, with a focus on dynamics, technological development and innovation.",
-                    field: "Industrial Engineering",
-                    keywords: ["economics", "business development", "project management"]
-                },
-                {
-                    name: "Information Technology",
-                    description: "Are you the next game developer, interaction designer or system architect? Develop tomorrow's secure software systems and design for future needs.",
-                    field: "Information Technology",
-                    keywords: ["electrical engineering", "mathematics", "programming", "IT"]
-                },
-                {
-                    name: "Mechanical Engineering and Technical Design",
-                    description: "With your systems perspective, you contribute to sustainable solutions in areas such as transport and energy supply.",
-                    field: "Mechanical Engineering and Technical Design",
-                    keywords: ["mechanical engineering", "production"]
-                },
-                {
-                    name: "Medical Engineering",
-                    description: "Improve future health and save lives by developing advanced technology with the help of artificial intelligence, among other things.",
-                    field: "Electrical Engineering",
-                    keywords: ["electrical engineering", "medical technology", "health", "AI"]
-                },
-                {
-                    name: "Civil and Environmental Engineering",
-                    description: "Take on the entire process from planning and construction to completion of buildings, traffic routes and bridges.",
-                    field: "Civil and Environmental Engineering",
-                    keywords: ["urban planning"]
-                },
-                {
-                    name: "Technical Design",
-                    description: "With an understanding of human needs and technology's possibilities, you will develop sustainable solutions that are appealing and competitive.",
-                    field: "Mechanical Engineering and Technical Design",
-                    keywords: ["design", "human-technology", "UX"]
-                },
-                {
-                    name: "Engineering Physics",
-                    description: "Design experiments and calculations to solve tomorrow's complex problems with a strong theoretical foundation in physics, mathematics and technology.",
-                    field: "Engineering Physics, Engineering Mathematics and Global Systems",
-                    keywords: ["physics", "quantum", "space"]
-                },
-                {
-                    name: "Chemical Engineering",
-                    description: "In chemistry and chemical engineering, there are solutions for sustainable energy supply, clean drinking water and resource-efficient materials – we just need to ensure we have the knowledge and innovation capacity.",
-                    field: "Chemical and Biotechnology",
-                    keywords: ["chemistry", "physics", "mathematics", "technology"]
-                },
-                {
-                    name: "Engineering Mathematics",
-                    description: "Work with development and analysis of tomorrow's mathematical and statistical models that are central to machine learning and artificial intelligence.",
-                    field: "Engineering Physics, Engineering Mathematics and Global Systems",
-                    keywords: ["mathematics"]
-                }
-            ]
-        };
+        // Complete Chalmers programs data with codes
+        const programsData = [
+            {
+                "code": "TKATK",
+                "name": "Architecture and Engineering",
+                "explanation": "A unique program that combines design with natural sciences and engineering, preparing you for a future where working methods and digital design tools are increasingly boundary-crossing. You'll work with the design of large-span structures like bridges and arenas, climate-smart buildings, or concert halls with high acoustic requirements, as well as the development of future material properties and expressions. The program addresses both technical/scientific and aesthetic/humanistic foundations while training an investigative, creative, and reflective approach.",
+                "keywords": ["design", "architecture", "engineering", "structures", "sustainability"],
+                "url": "arkitektur-och-teknik-arkitektcivilingenjor"
+            },
+            {
+                "code": "TKAUT",
+                "name": "Automation and Mechatronics",
+                "explanation": "Advanced sensors and artificial intelligence are rapidly influencing the development of new technical products. In this program, you'll gain the tools to lead future technology in a smarter, cheaper, and more environmentally friendly direction. You'll get a broad introduction to engineering with elements of information technology, computer technology, artificial intelligence, as well as mechanics and electronics. The program is designed to increase your understanding of how mechanics, electronics, computers, and software work together.",
+                "keywords": ["automation", "AI", "robotics", "sensors", "mechatronics"],
+                "url": "automation-och-mekatronik-civilingenjor"
+            },
+            {
+                "code": "TKBIO",
+                "name": "Biotechnology",
+                "explanation": "In biotechnology, studies of living organisms and their biological and chemical processes are combined to develop life-improving products for humans, animals, and nature. This can involve creating breakthrough medicines, developing renewable fuels, producing future food, or making the biotechnology industry more sustainable. You'll learn how cells and advanced organisms function and how to manipulate them to create solutions and products that make a difference.",
+                "keywords": ["biotechnology", "medicine", "sustainability", "biology", "chemistry"],
+                "url": "bioteknik-civilingenjor"
+            },
+            {
+                "code": "TKDAT",
+                "name": "Computer Science and Engineering",
+                "explanation": "Computer technology is woven into almost everything, and it's hard to imagine life without computer-based products and services. Digital communication platforms, smart mobile phones, and small digital systems for monitoring and control are just a few examples of what is now considered natural parts of our society. With competence in computer science, you become the spider in the web that holds complicated projects together, contributing systems thinking since you understand the system from what the underlying hardware can do to how the application should look and the glue in between.",
+                "keywords": ["computer science", "programming", "software", "systems", "technology"],
+                "url": "datateknik-civilingenjor"
+            },
+            {
+                "code": "TKELT",
+                "name": "Electrical Engineering",
+                "explanation": "As a civil engineer in electrical engineering, you create smart solutions to today's and tomorrow's challenges in energy supply, environmentally friendly and safe vehicles, smart cities, data communication, and much more. You're also involved in driving development towards a sustainable society and working to make everyday life easier for people worldwide. With knowledge of electricity and magnetism, you get the competence required to develop small and large systems, from kilometer-long power grids to mobile phone micrometer-sized components.",
+                "keywords": ["electrical", "energy", "smart cities", "sustainability", "power"],
+                "url": "elektroteknik-civilingenjor"
+            },
+            {
+                "code": "TKGBS",
+                "name": "Global Systems",
+                "explanation": "Humanity today faces a number of major challenges whose solutions will require comprehensive changes in both technology and society. This program prepares you to understand and handle the challenges we face at local and global levels. You'll learn to think systematically about these challenges and how they interact with society, technology, and nature. The program provides a foundation in mathematics, physics, and computer science with extensive elements of mathematical thinking, systems thinking, modeling, and problem-solving.",
+                "keywords": ["systems thinking", "sustainability", "global challenges", "mathematics", "physics"],
+                "url": "globala-system-civilingenjor"
+            },
+            {
+                "code": "TKIEK",
+                "name": "Industrial Engineering and Management",
+                "explanation": "Combine technology and economics in an education where you learn to develop both existing and new businesses. Your knowledge will make you sought after by industry and organizations as a project manager, business developer, or manager. In Industrial Engineering and Management, you initially gain basic knowledge of technology and technology-based business operations, then choose a more in-depth profile in the education. You'll get a solid technical foundation and understanding of organizational and economic issues through practical case studies.",
+                "keywords": ["business", "management", "economics", "project management", "technology"],
+                "url": "industriell-ekonomi-civilingenjor"
+            },
+            {
+                "code": "TKITE",
+                "name": "Information Technology",
+                "explanation": "Are you the next game developer, interaction designer, or system architect? With a civil engineering degree in information technology, you work with developing future software systems. In all sectors of society, technical problem solvers with a sense of user needs are needed. The education is for you who want to be part of an exciting and attractive industry with many opportunities. You'll primarily study software development and mathematics during the first three years, which forms the foundation of your engineering degree.",
+                "keywords": ["IT", "software development", "game development", "systems", "user experience"],
+                "url": "informationsteknik-civilingenjor"
+            },
+            {
+                "code": "TKMAS",
+                "name": "Mechanical Engineering",
+                "explanation": "Do you want to design and build everything from small components to large systems? With mechanical engineering, you can develop self-driving vehicles, life-saving robots, or find new ways to recycle everything from electronics to old products. As a mechanical engineer, you contribute practical solutions that make society more sustainable. This flexible program allows you to choose either a shorter university engineer track (3 years) or a longer civil engineer track (5 years).",
+                "keywords": ["mechanical", "robotics", "vehicles", "sustainability", "design"],
+                "url": "maskinteknik-hogskoleingenjorcivilingenjor"
+            },
+            {
+                "code": "TKMED",
+                "name": "Biomedical Engineering",
+                "explanation": "Through biomedical engineering, you can save lives and improve future health with advanced technology and artificial intelligence. Healthcare faces major challenges with an aging population, and your innovation will contribute to solutions in a globally growing future industry. The education is unique through close collaboration with Sahlgrenska Academy and Sahlgrenska University Hospital. You'll learn how to prevent, diagnose, monitor, and treat various diseases more easily using medical technology.",
+                "keywords": ["biomedical", "healthcare", "AI", "medical technology", "diagnostics"],
+                "url": "medicinsk-teknik-civilingenjor"
+            },
+            {
+                "code": "TKSAM",
+                "name": "Civil and Environmental Engineering",
+                "explanation": "Digitalization, sustainable development, electrification, and climate change are some of the complex challenges that society faces. As a civil engineer in civil and environmental engineering, you help shape future cities and society. You'll be confronted with today's and tomorrow's technical challenges to handle nature's resources, our society, and how we humans live and move in these environments. The education is characterized by a holistic view where all parts of building and managing a society are included.",
+                "keywords": ["civil engineering", "sustainability", "urban planning", "environment", "infrastructure"],
+                "url": "samhallsbyggnadsteknik-civilingenjor"
+            },
+            {
+                "code": "TKDES",
+                "name": "Engineering Design",
+                "explanation": "By putting the user in focus, you learn to develop products and innovations that make a real difference in people's daily lives. Here you get to take your ideas from sketch to reality in a creative design process. You get a holistic perspective on product development and learn to explore different combinations of form, material, and technology to create user-friendly and sustainable products that can actually change the world around you. This flexible program allows you to choose either a shorter university engineer track (3 years) or a longer civil engineer track (5 years).",
+                "keywords": ["design", "innovation", "user experience", "product development", "sustainability"],
+                "url": "teknisk-design-hogskoleingenjorcivilingenjor"
+            },
+            {
+                "code": "TKTFY",
+                "name": "Engineering Physics",
+                "explanation": "As a civil engineer in engineering physics, you learn to solve complex problems. This, combined with a strong theoretical foundation in physics, mathematics, and technology, will make you sought after in the job market. Virtually all major technology companies have technical physicists on their staff, usually in leading positions in research or development departments. The education's breadth makes room for technical physicists in most companies and organizations.",
+                "keywords": ["physics", "mathematics", "research", "technology", "problem solving"],
+                "url": "teknisk-fysik-civilingenjor"
+            },
+            {
+                "code": "TKKMT",
+                "name": "Chemical Engineering",
+                "explanation": "Do you want to be part of creating the future? Chemical engineering is the education for you who want to combine molecular knowledge with technical problem-solving to meet society's major challenges. Here you get the tools to develop the next generation of medicines, new advanced materials, and innovative energy solutions. As a civil engineer in chemical engineering, you play an important role in shaping tomorrow's sustainable society and driving the circular transition.",
+                "keywords": ["chemistry", "materials", "energy", "sustainability", "innovation"],
+                "url": "kemiteknik-civilingenjor"
+            },
+            {
+                "code": "TKTEM",
+                "name": "Engineering Mathematics",
+                "explanation": "You who choose Engineering Mathematics think mathematics is fun and appreciate the subject's usefulness and theoretical weight. During the education, you train in problem-solving and learn to use powerful mathematical tools, giving you great opportunities for exciting jobs in many different industries. Mathematics plays a decisive role in all technical professional areas. The education's breadth prepares you to work with computational and computer science, AI and statistics, but also in industries such as the pharmaceutical industry, chemical industry, transport sector, urban planning, and communication and security.",
+                "keywords": ["mathematics", "AI", "statistics", "computational", "problem solving"],
+                "url": "teknisk-matematik-civilingenjor"
+            },
+            {
+                "code": "TKARK",
+                "name": "Architecture",
+                "explanation": "Are you interested in how people live, how a good workplace can be shaped, and how our cities are built so that they are fair, attractive, and sustainable? This education is for you who want to work in teams and project form, and who want to develop your ability to design the built environment to contribute to sustainable development. You'll work with the design of buildings, streets, parks, and city districts, combining technical and artistic knowledge to achieve functionality and aesthetic solutions while following sustainable development as a common thread throughout your studies.",
+                "keywords": ["architecture", "urban planning", "sustainability", "design", "buildings"],
+                "url": "arkitektur-arkitekt"
+            }
+        ];
 
-        let filteredPrograms = [...knowledgeData.programs];
+        // Initialize filtered programs
+        programSelectionState.filteredPrograms = [...programsData];
 
         // API Helper Functions
         async function apiCall(endpoint, method = 'GET', data = null) {
@@ -934,6 +1286,315 @@
         const storyContent = document.getElementById('storyContent');
         const nameInput = document.getElementById('nameInput');
         const status = document.getElementById('status');
+
+        // Enhanced Program Selection Functions
+        function openProgramSelection() {
+            console.log('🎓 Opening enhanced program selection');
+            programSelectionState.isOpen = true;
+            
+            // Update description with player name
+            const descriptionElement = document.getElementById('selectionDescription');
+            if (gameState.player.name) {
+                descriptionElement.textContent = `Welcome ${gameState.player.name}! Explore all engineering programs at Chalmers. Each program offers unique opportunities and will shape your entire university experience. Use the search below to find the program that matches your interests and career goals.`;
+            }
+            
+            // Reset selection state
+            programSelectionState.selectedProgram = null;
+            programSelectionState.selectedProgramCode = null;
+            programSelectionState.filteredPrograms = [...programsData];
+            
+            // Show modal
+            const modal = document.getElementById('programSelectionModal');
+            const modalCloseBtn = modal.querySelector('.modal-close');
+            
+            // Hide close button for program selection too (mandatory choice)
+            modalCloseBtn.style.display = 'none';
+            
+            modal.classList.add('active');
+            
+            // Prevent body scroll
+            document.body.style.overflow = 'hidden';
+            
+            // Render programs and setup search
+            renderProgramsGrid();
+            setupProgramSearch();
+            updateSelectedProgramInfo();
+            
+            // Focus on search input
+            setTimeout(() => {
+                document.getElementById('programSearchInput').focus();
+            }, 300);
+        }
+
+        function closeProgramSelection() {
+            console.log('🎓 Closing program selection');
+            programSelectionState.isOpen = false;
+            
+            const modal = document.getElementById('programSelectionModal');
+            modal.classList.remove('active');
+            
+            // Restore body scroll
+            document.body.style.overflow = '';
+            
+            // Reset modal content to default state
+            const modalHeader = modal.querySelector('.modal-header h2');
+            const modalCloseBtn = modal.querySelector('.modal-close');
+            const selectionDescription = document.getElementById('selectionDescription');
+            const searchInput = document.getElementById('programSearchInput');
+            const confirmBtn = document.getElementById('confirmSelectionBtn');
+            
+            // Reset to default program selection state
+            modalHeader.innerHTML = '🎓 Choose Your Engineering Program';
+            selectionDescription.textContent = 'Explore all engineering programs at Chalmers. Each program offers unique opportunities and will shape your entire university experience. Use the search below to find the program that matches your interests and career goals.';
+            searchInput.placeholder = 'Search programs by name or keywords...';
+            confirmBtn.innerHTML = `
+                <span>Continue with Selected Program</span>
+                <span>🚀</span>
+            `;
+            
+            // Show the close button again (in case it was hidden for master's selection)
+            modalCloseBtn.style.display = 'flex';
+            
+            // Reset filtered programs to full program list
+            programSelectionState.filteredPrograms = [...programsData];
+        }
+
+        function setupProgramSearch() {
+            const searchInput = document.getElementById('programSearchInput');
+            searchInput.value = ''; // Clear search
+            
+            searchInput.oninput = (e) => {
+                filterPrograms(e.target.value);
+            };
+        }
+
+        function filterPrograms(searchTerm) {
+            const term = searchTerm.toLowerCase();
+            programSelectionState.filteredPrograms = programsData.filter(program => {
+                const matchesSearch = !term || 
+                    program.name.toLowerCase().includes(term) ||
+                    program.code.toLowerCase().includes(term) ||
+                    program.explanation.toLowerCase().includes(term) ||
+                    program.keywords.some(keyword => keyword.toLowerCase().includes(term));
+                
+                return matchesSearch;
+            });
+            
+            renderProgramsGrid();
+        }
+
+        function renderProgramsGrid() {
+            const container = document.getElementById('programsGrid');
+            
+            if (programSelectionState.filteredPrograms.length === 0) {
+                container.innerHTML = `
+                    <div class="no-results">
+                        <h3>No programs found</h3>
+                        <p>Try adjusting your search terms</p>
+                        <button class="clear-search-btn" onclick="clearProgramSearch()">Clear Search</button>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = programSelectionState.filteredPrograms.map(program => `
+                <div class="program-card ${programSelectionState.selectedProgram === program.name ? 'selected' : ''}" 
+                     onclick="selectProgramInModal('${program.name}', '${program.code}')">
+                    <div class="program-code">${program.code}</div>
+                    <div class="program-title">${program.name}</div>
+                    <div class="program-description">${program.explanation}</div>
+                    <div class="program-keywords">
+                        ${program.keywords.slice(0, 4).map(keyword => 
+                            `<span class="program-keyword">${keyword}</span>`
+                        ).join('')}
+                    </div>
+                    <div class="program-footer">
+                        <a href="${getChalmersUrl(program)}" target="_blank" class="learn-more" onclick="event.stopPropagation()">Learn More →</a>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function selectProgramInModal(programName, programCode) {
+            console.log('🎓 Selected program in modal:', programName, 'Code:', programCode);
+            programSelectionState.selectedProgram = programName;
+            programSelectionState.selectedProgramCode = programCode;
+            renderProgramsGrid();
+            updateSelectedProgramInfo();
+        }
+
+        function updateSelectedProgramInfo() {
+            const infoContainer = document.getElementById('selectedProgramInfo');
+            const nameElement = document.getElementById('selectedProgramName');
+            const descriptionElement = document.getElementById('selectedProgramDescription');
+            const confirmBtn = document.getElementById('confirmSelectionBtn');
+            
+            if (programSelectionState.selectedProgram) {
+                const program = programsData.find(p => p.name === programSelectionState.selectedProgram);
+                nameElement.textContent = `${program.code} - ${program.name}`;
+                descriptionElement.textContent = program.explanation.substring(0, 150) + '...';
+                infoContainer.classList.add('active');
+                confirmBtn.classList.add('active');
+            } else {
+                infoContainer.classList.remove('active');
+                confirmBtn.classList.remove('active');
+            }
+        }
+
+        function clearProgramSearch() {
+            document.getElementById('programSearchInput').value = '';
+            programSelectionState.filteredPrograms = [...programsData];
+            renderProgramsGrid();
+        }
+
+        function confirmProgramSelection() {
+            console.log('🐛 DEBUG confirmProgramSelection called:', {
+                selectedProgram: programSelectionState.selectedProgram,
+                selectedProgramCode: programSelectionState.selectedProgramCode,
+                isMastersSelection: gameState.currentChoice && gameState.currentChoice.type === 'masters_selection'
+            });
+            
+            if (!programSelectionState.selectedProgram) {
+                console.log('🐛 DEBUG: No program selected, returning');
+                return;
+            }
+            
+            // Check if this is master's selection or regular program selection
+            const isMastersSelection = gameState.currentChoice && gameState.currentChoice.type === 'masters_selection';
+            
+            if (isMastersSelection) {
+                console.log('🎓 Confirming master\'s program selection:', programSelectionState.selectedProgram);
+                
+                // Close modal first
+                closeProgramSelection();
+                
+                // Find the selected option index from the original choice
+                const selectedIndex = gameState.currentChoice.options.findIndex(option => 
+                    option.description === programSelectionState.selectedProgram
+                );
+                
+                console.log('🐛 DEBUG: Found selected index:', selectedIndex);
+                
+                if (selectedIndex !== -1) {
+                    // Continue with master's selection
+                    setTimeout(() => {
+                        makeMastersChoice(selectedIndex);
+                    }, 300);
+                } else {
+                    showStatus('Error: Could not find selected master\'s program', 'error');
+                }
+            } else {
+                // Regular program selection - need both program and code
+                if (!programSelectionState.selectedProgramCode) {
+                    showStatus('Error: Program code not found', 'error');
+                    return;
+                }
+                
+                console.log('🎓 Confirming program selection:', programSelectionState.selectedProgram, 'Code:', programSelectionState.selectedProgramCode);
+                
+                // Close modal first
+                closeProgramSelection();
+                
+                // Continue with the selected program
+                setTimeout(() => {
+                    selectProgram(programSelectionState.selectedProgram, programSelectionState.selectedProgramCode);
+                }, 300);
+            }
+        }
+
+        // Handle master's choice selection (similar to makeChoice but for master's programs)
+        async function makeMastersChoice(choiceIndex) {
+            if (gameState.isGenerating) {
+                showStatus('Please wait while processing...', 'loading');
+                return;
+            }
+
+            // Add a visual indication that master's program was selected
+            const masterSelectionDiv = document.createElement('div');
+            masterSelectionDiv.className = 'choice-container completed masters-selection fade-in';
+            masterSelectionDiv.innerHTML = `
+                <div class="choice-header completed masters-selection">
+                    <div class="choice-title">
+                        <span class="choice-badge masters completed">🎓 Master's Program Selected</span>
+                        Master's Program Selection
+                    </div>
+                </div>
+                <div class="choice-content">
+                    <div class="choice-situation">${gameState.currentChoice.situation}</div>
+                    <div class="choice-selected">
+                        <div class="choice-selected-text">✅ Selected: ${gameState.currentChoice.options[choiceIndex].description}</div>
+                        <div class="choice-selected-implication">→ ${gameState.currentChoice.options[choiceIndex].character_implication}</div>
+                    </div>
+                </div>
+            `;
+            
+            // Add to story content at the top
+            if (storyContent.children.length > 0) {
+                storyContent.insertBefore(masterSelectionDiv, storyContent.firstChild);
+            } else {
+                storyContent.appendChild(masterSelectionDiv);
+            }
+
+            try {
+                const result = await apiCall('/make_choice', 'POST', {
+                    session_id: gameState.sessionId,
+                    choice_index: choiceIndex,
+                    choice_data: gameState.currentChoice
+                });
+                
+                const oldYear = gameState.player.year;
+                gameState.player = result.profile;
+                const selectedOption = result.selected_option;
+                const newYear = gameState.player.year;
+                
+                // Store choice in history
+                gameState.choiceHistory.push({
+                    choice: gameState.currentChoice,
+                    selectedOption: selectedOption,
+                    choiceIndex: choiceIndex,
+                    year: newYear
+                });
+                
+                updateProfileDisplay();
+                
+                // Check if year advanced and show special message
+                if (newYear > oldYear) {
+                    const yearAdvanceDiv = document.createElement('div');
+                    yearAdvanceDiv.className = 'year-advancement';
+                    
+                    if (gameState.player.selected_masters_program) {
+                        yearAdvanceDiv.innerHTML = `
+                            🎓 <strong>Congratulations!</strong><br>
+                            You've selected ${gameState.player.selected_masters_program} and advanced to Year ${newYear}!
+                        `;
+                    } else {
+                        yearAdvanceDiv.innerHTML = `
+                            📅 <strong>Year ${newYear} begins!</strong><br>
+                            Your university journey continues with your chosen master's specialization...
+                        `;
+                    }
+                    
+                    // Add the message at the top of story content
+                    if (storyContent.children.length > 0) {
+                        storyContent.insertBefore(yearAdvanceDiv, storyContent.firstChild);
+                    } else {
+                        storyContent.appendChild(yearAdvanceDiv);
+                    }
+                }
+                
+                // Generate next choice
+                setTimeout(() => {
+                    generateNextChoice();
+                }, newYear > oldYear ? 2500 : 1500);
+                
+            } catch (error) {
+                showStatus('Failed to make master\'s choice. Please try again.', 'error');
+            }
+        }
+
+        function getChalmersUrl(program) {
+            return program ? `https://www.chalmers.se/utbildning/hitta-program/${program.url}/` : '#';
+        }
 
         // Initialize the game
         async function init() {
@@ -1061,99 +1722,24 @@ Are you ready to discover which program will unlock your potential?`;
             }, 1500);
         }
 
-        // Filter programs based on search
-        function filterPrograms(searchTerm) {
-            const term = searchTerm.toLowerCase();
-            filteredPrograms = knowledgeData.programs.filter(program => 
-                program.name.toLowerCase().includes(term) ||
-                program.description.toLowerCase().includes(term) ||
-                program.field.toLowerCase().includes(term) ||
-                program.keywords.some(keyword => keyword.toLowerCase().includes(term))
-            );
-            renderProgramGrid();
-        }
-
-        // Render program grid
-        function renderProgramGrid() {
-            const programGrid = document.getElementById('programGrid');
-            if (!programGrid) return;
-
-            programGrid.innerHTML = '';
-            
-            filteredPrograms.forEach((program, index) => {
-                const card = document.createElement('div');
-                card.className = 'program-card';
-                card.onclick = () => selectProgram(program.name);
-                card.innerHTML = `
-                    <div class="program-field">${program.field}</div>
-                    <div class="program-title">${program.name}</div>
-                    <div class="program-description">${program.description}</div>
-                    <div class="program-keywords">
-                        ${program.keywords.map(keyword => 
-                            `<span class="program-keyword">${keyword}</span>`
-                        ).join('')}
-                    </div>
-                `;
-                programGrid.appendChild(card);
-            });
-
-            if (filteredPrograms.length === 0) {
-                programGrid.innerHTML = `
-                    <div style="grid-column: 1 / -1; text-align: center; padding: 40px; color: #6c757d;">
-                        <h3>No programs found</h3>
-                        <p>Try a different search term or clear the search to see all programs.</p>
-                    </div>
-                `;
-            }
-        }
-
-        // Show program selection
+        // Show program selection using enhanced modal
         function showProgramSelection() {
             gameState.stage = 'program_input';
-            
-            // Clear the story content and add program selection
-            storyContent.innerHTML = '';
-            
-            const programContainer = document.createElement('div');
-            programContainer.className = 'fade-in';
-            programContainer.innerHTML = `
-                <h2>Choose Your Path! 🎓</h2>
-                <p>Now that you know about Chalmers, it's time to choose your engineering program. Each program offers unique opportunities and will shape your entire university experience:</p>
-                
-                <div class="program-search">
-                    <input type="text" class="search-input" placeholder="🔍 Search programs by name, field, or keywords..." 
-                           oninput="filterPrograms(this.value)" />
-                </div>
-            `;
-            
-            const programGrid = document.createElement('div');
-            programGrid.className = 'program-grid';
-            programGrid.id = 'programGrid';
-            
-            programContainer.appendChild(programGrid);
-            storyContent.appendChild(programContainer);
-            
-            // Render initial program grid
-            renderProgramGrid();
-            
+            openProgramSelection();
             showStatus('Choose your engineering program to continue', 'ready');
         }
 
-        // Select program
-        async function selectProgram(programName) {
-            // Visual feedback
-            document.querySelectorAll('.program-card').forEach(card => {
-                card.classList.remove('selected');
-            });
-            event.target.closest('.program-card').classList.add('selected');
-
+        // Updated selectProgram function to accept program code
+        async function selectProgram(programName, programCode) {
             try {
+                // Send program code to backend instead of program name
                 const result = await apiCall('/set_program', 'POST', { 
                     session_id: gameState.sessionId, 
-                    program: programName 
+                    program: programCode  // Send the program code
                 });
                 
                 gameState.player = result.profile;
+                gameState.player.programCode = programCode; // Store program code locally
                 gameState.stage = 'life_choice';
                 
                 // Clear content and add confirmation at top
@@ -1163,7 +1749,7 @@ Are you ready to discover which program will unlock your potential?`;
                 confirmationContainer.className = 'fade-in';
                 confirmationContainer.innerHTML = `
                     <h3>✅ Excellent choice!</h3>
-                    <p>You've selected <strong>${programName}</strong>. Your personalized AI-powered journey begins now...</p>
+                    <p>You've selected <strong>${programCode} - ${programName}</strong>. Your personalized AI-powered journey begins now...</p>
                     <hr style="margin: 20px 0; border: 1px solid #e9ecef;">
                 `;
                 storyContent.appendChild(confirmationContainer);
@@ -1227,34 +1813,27 @@ Are you ready to discover which program will unlock your potential?`;
         function displayChoice(choice) {
             gameState.currentChoice = choice;
             
+            // Special handling for master's selection - open modal instead of regular choice display
+            if (choice.type === 'masters_selection') {
+                displayMastersSelectionModal(choice);
+                return;
+            }
+            
             // Create choice container
             const choiceContainer = document.createElement('div');
             choiceContainer.className = 'choice-container current fade-in';
             choiceContainer.id = `choice-${gameState.choiceHistory.length}`;
             
-            // Special styling for master's selection
-            if (choice.type === 'masters_selection') {
-                choiceContainer.classList.add('masters-selection');
-            }
-            
             // Create choice header
             const choiceHeader = document.createElement('div');
             choiceHeader.className = 'choice-header';
-            if (choice.type === 'masters_selection') {
-                choiceHeader.classList.add('masters-selection');
-            }
             
             const choiceTitle = document.createElement('div');
             choiceTitle.className = 'choice-title';
             
             const badge = document.createElement('span');
             badge.className = 'choice-badge';
-            if (choice.type === 'masters_selection') {
-                badge.classList.add('masters');
-                badge.textContent = '🎓 Master\'s Selection';
-            } else {
-                badge.textContent = `Choice ${gameState.choiceHistory.length + 1}`;
-            }
+            badge.textContent = `Choice ${gameState.choiceHistory.length + 1}`;
             
             choiceTitle.innerHTML = `${choice.title}`;
             choiceTitle.prepend(badge);
@@ -1270,24 +1849,6 @@ Are you ready to discover which program will unlock your potential?`;
             situationDiv.className = 'choice-situation';
             situationDiv.textContent = choice.situation;
             choiceContent.appendChild(situationDiv);
-            
-            // Add special note for master's selection
-            if (choice.type === 'masters_selection') {
-                const masterNote = document.createElement('div');
-                masterNote.style.cssText = `
-                    background: rgba(102, 126, 234, 0.1);
-                    padding: 15px;
-                    border-radius: 10px;
-                    margin-bottom: 20px;
-                    text-align: center;
-                    border: 1px solid rgba(102, 126, 234, 0.2);
-                `;
-                masterNote.innerHTML = `
-                    <strong>📚 Important Academic Milestone</strong><br>
-                    This choice will determine your master's specialization and shape your final years at Chalmers.
-                `;
-                choiceContent.appendChild(masterNote);
-            }
             
             // Create options container
             const optionsContainer = document.createElement('div');
@@ -1307,24 +1868,6 @@ Are you ready to discover which program will unlock your potential?`;
             
             choiceContent.appendChild(optionsContainer);
             
-            // Add special footer for master's selection
-            if (choice.type === 'masters_selection') {
-                const footer = document.createElement('div');
-                footer.style.cssText = `
-                    background: rgba(102, 126, 234, 0.05);
-                    padding: 15px;
-                    border-radius: 10px;
-                    margin-top: 20px;
-                    text-align: center;
-                    font-size: 0.9rem;
-                    color: #667eea;
-                `;
-                footer.innerHTML = `
-                    💡 <strong>Tip:</strong> Your choice here will unlock specialized courses and career paths in your final years.
-                `;
-                choiceContent.appendChild(footer);
-            }
-            
             choiceContainer.appendChild(choiceHeader);
             choiceContainer.appendChild(choiceContent);
             
@@ -1336,6 +1879,193 @@ Are you ready to discover which program will unlock your potential?`;
             }
             
             storyContent.scrollTop = 0; // Scroll to top to see new choice
+        }
+
+        // Display master's selection using the enhanced modal (same as program selection)
+        function displayMastersSelectionModal(choice) {
+            console.log('🎓 Opening master\'s selection modal');
+            
+            // Store the choice for later use
+            gameState.currentChoice = choice;
+            
+            // Update modal content for master's selection
+            const modal = document.getElementById('programSelectionModal');
+            const modalHeader = modal.querySelector('.modal-header h2');
+            const modalCloseBtn = modal.querySelector('.modal-close');
+            const selectionDescription = document.getElementById('selectionDescription');
+            
+            // Update header and description for master's selection
+            modalHeader.innerHTML = '🎓 Choose Your Master\'s Program';
+            selectionDescription.textContent = `${gameState.player.name}, it's time to choose your master's specialization! This decision will shape your final years at Chalmers and determine your expertise area. Each master's program offers unique opportunities and career paths.`;
+            
+            // Hide the close button for master's selection (mandatory choice)
+            modalCloseBtn.style.display = 'none';
+            
+            // Set up master's selection state
+            programSelectionState.selectedProgram = null;
+            programSelectionState.selectedProgramCode = null;
+            programSelectionState.isOpen = true;
+            
+            // Convert choice options to program-like format for the modal
+            const masterPrograms = choice.options.map((option, index) => ({
+                code: `MASTER_${index + 1}`,
+                name: option.description,
+                explanation: option.character_implication || `This specialization will shape your expertise and career path.`,
+                keywords: option.keywords || ["master's", "specialization", "advanced"],
+                url: "#"
+            }));
+            
+            // Update filtered programs for master's selection
+            programSelectionState.filteredPrograms = masterPrograms;
+            
+            // Show modal
+            modal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+            
+            // Update confirm button text
+            const confirmBtn = document.getElementById('confirmSelectionBtn');
+            confirmBtn.innerHTML = `
+                <span>Continue with Selected Master's Program</span>
+                <span>🎓</span>
+            `;
+            
+            // Render the master's programs grid
+            renderMastersProgramsGrid();
+            setupMastersProgramSearch();
+            updateSelectedProgramInfo();
+            
+            // Focus on search input
+            setTimeout(() => {
+                document.getElementById('programSearchInput').focus();
+            }, 300);
+            
+            showStatus('Choose your master\'s specialization to continue', 'ready');
+        }
+
+        // Render master's programs grid (similar to regular programs but for master's options)
+        function renderMastersProgramsGrid() {
+            const container = document.getElementById('programsGrid');
+            
+            if (programSelectionState.filteredPrograms.length === 0) {
+                container.innerHTML = `
+                    <div class="no-results">
+                        <h3>No master's programs found</h3>
+                        <p>Try adjusting your search terms</p>
+                        <button class="clear-search-btn" onclick="clearProgramSearch()">Clear Search</button>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = programSelectionState.filteredPrograms.map(program => `
+                <div class="program-card ${programSelectionState.selectedProgram === program.name ? 'selected' : ''}" 
+                     onclick="selectMastersProgramInModal('${program.name.replace(/'/g, "\\'")}', '${program.code}')">
+                    <div class="program-code">${program.code}</div>
+                    <div class="program-title">${program.name}</div>
+                    <div class="program-description">${program.explanation}</div>
+                    <div class="program-keywords">
+                        ${program.keywords.slice(0, 4).map(keyword => 
+                            `<span class="program-keyword">${keyword}</span>`
+                        ).join('')}
+                    </div>
+                    <div class="program-footer">
+                        <span class="learn-more">Master's Specialization</span>
+                    </div>
+                </div>
+            `).join('');
+            
+            console.log('🐛 DEBUG: Rendered masters programs grid, selected program:', programSelectionState.selectedProgram);
+        }
+
+        // Setup search for master's programs
+        function setupMastersProgramSearch() {
+            const searchInput = document.getElementById('programSearchInput');
+            searchInput.value = '';
+            searchInput.placeholder = 'Search master\'s programs...';
+            
+            searchInput.oninput = (e) => {
+                filterMastersPrograms(e.target.value);
+            };
+        }
+
+        // Filter master's programs
+        function filterMastersPrograms(searchTerm) {
+            const term = searchTerm.toLowerCase();
+            const allMasterPrograms = gameState.currentChoice.options.map((option, index) => ({
+                code: `MASTER_${index + 1}`,
+                name: option.description,
+                explanation: option.character_implication || `This specialization will shape your expertise and career path.`,
+                keywords: option.keywords || ["master's", "specialization", "advanced"],
+                url: "#"
+            }));
+            
+            programSelectionState.filteredPrograms = allMasterPrograms.filter(program => {
+                const matchesSearch = !term || 
+                    program.name.toLowerCase().includes(term) ||
+                    program.code.toLowerCase().includes(term) ||
+                    program.explanation.toLowerCase().includes(term) ||
+                    program.keywords.some(keyword => keyword.toLowerCase().includes(term));
+                
+                return matchesSearch;
+            });
+            
+            renderMastersProgramsGrid();
+        }
+
+        // Select master's program in modal
+        function selectMastersProgramInModal(programName, programCode) {
+            console.log('🎓 Selected master\'s program in modal:', programName, 'Code:', programCode);
+            programSelectionState.selectedProgram = programName;
+            programSelectionState.selectedProgramCode = programCode;
+            renderMastersProgramsGrid();
+            updateSelectedProgramInfo();
+        }
+
+        // Updated updateSelectedProgramInfo to handle both regular and master's programs
+        function updateSelectedProgramInfo() {
+            const infoContainer = document.getElementById('selectedProgramInfo');
+            const nameElement = document.getElementById('selectedProgramName');
+            const descriptionElement = document.getElementById('selectedProgramDescription');
+            const confirmBtn = document.getElementById('confirmSelectionBtn');
+            
+            console.log('🐛 DEBUG updateSelectedProgramInfo:', {
+                selectedProgram: programSelectionState.selectedProgram,
+                selectedProgramCode: programSelectionState.selectedProgramCode,
+                isMastersSelection: gameState.currentChoice && gameState.currentChoice.type === 'masters_selection'
+            });
+            
+            if (programSelectionState.selectedProgram) {
+                // Check if this is master's selection
+                const isMastersSelection = gameState.currentChoice && gameState.currentChoice.type === 'masters_selection';
+                
+                if (isMastersSelection) {
+                    // For master's selection, find the program in the filtered programs
+                    const program = programSelectionState.filteredPrograms.find(p => p.name === programSelectionState.selectedProgram);
+                    if (program) {
+                        nameElement.textContent = program.name;
+                        descriptionElement.textContent = program.explanation.substring(0, 150) + '...';
+                    } else {
+                        nameElement.textContent = programSelectionState.selectedProgram;
+                        descriptionElement.textContent = 'Master\'s program specialization';
+                    }
+                } else {
+                    // For regular program selection
+                    const program = programsData.find(p => p.name === programSelectionState.selectedProgram);
+                    if (program) {
+                        nameElement.textContent = `${program.code} - ${program.name}`;
+                        descriptionElement.textContent = program.explanation.substring(0, 150) + '...';
+                    }
+                }
+                
+                infoContainer.classList.add('active');
+                confirmBtn.classList.add('active');
+                
+                console.log('🐛 DEBUG: Button should now be active');
+            } else {
+                infoContainer.classList.remove('active');
+                confirmBtn.classList.remove('active');
+                console.log('🐛 DEBUG: Button should be inactive');
+            }
         }
 
         // Make choice with enhanced completion display
@@ -1452,7 +2182,23 @@ Are you ready to discover which program will unlock your potential?`;
         // Update profile display with proper backend year sync
         function updateProfileDisplay() {
             document.getElementById('playerName').textContent = gameState.player.name || 'Not set';
-            document.getElementById('playerProgram').textContent = gameState.player.program || 'Not selected';
+            
+            // Display program with code if available
+            let programText = 'Not selected';
+            if (gameState.player.program) {
+                if (gameState.player.programCode) {
+                    programText = `${gameState.player.programCode} - ${gameState.player.program}`;
+                } else {
+                    // Find program code from programsData
+                    const programData = programsData.find(p => p.name === gameState.player.program);
+                    if (programData) {
+                        programText = `${programData.code} - ${gameState.player.program}`;
+                    } else {
+                        programText = gameState.player.program;
+                    }
+                }
+            }
+            document.getElementById('playerProgram').textContent = programText;
             
             const choiceCount = gameState.player.life_choices?.length || 0;
             document.getElementById('choiceCount').textContent = choiceCount;
@@ -1466,9 +2212,11 @@ Are you ready to discover which program will unlock your potential?`;
             // Show master's program in program field if selected
             const programElement = document.getElementById('playerProgram');
             if (gameState.player.selected_masters_program) {
-                programElement.textContent = `${gameState.player.program} → ${gameState.player.selected_masters_program}`;
-            } else {
-                programElement.textContent = gameState.player.program || 'Not selected';
+                if (gameState.player.programCode) {
+                    programElement.textContent = `${gameState.player.programCode} - ${gameState.player.program} → ${gameState.player.selected_masters_program}`;
+                } else {
+                    programElement.textContent = `${gameState.player.program} → ${gameState.player.selected_masters_program}`;
+                }
             }
             
             // Update progress bar based on total journey (10 choices total = 5 years × 2 choices per year)
@@ -1482,6 +2230,27 @@ Are you ready to discover which program will unlock your potential?`;
             status.textContent = message;
             status.className = `status ${type}`;
         }
+
+        // Close modal when clicking outside
+        document.getElementById('programSelectionModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                // Optional: uncomment to allow closing by clicking outside
+                // closeProgramSelection();
+            }
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            if (programSelectionState.isOpen) {
+                // Both program and master's selection are mandatory - no ESC allowed
+                // (Removed ESC handling entirely)
+                
+                // Allow Enter to confirm selection for both types
+                if (e.key === 'Enter' && programSelectionState.selectedProgram) {
+                    confirmProgramSelection();
+                }
+            }
+        });
 
         // Initialize the application
         init();

@@ -333,6 +333,109 @@ class ProgrammeAnalyzer:
         
         return sorted(accredited_codes)
     
+    def create_bidirectional_mapping_json(self, year: str) -> Dict[str, Any]:
+        """
+        Create a bidirectional mapping JSON for programs and masters.
+        
+        Args:
+            year: Academic year
+            
+        Returns:
+            Dictionary containing bidirectional mapping
+        """
+        # Get all bachelor programmes (Master of Science in Engineering)
+        bachelor_programmes = []
+        master_programmes = []
+        
+        for programme in self.programmes:
+            if programme.get("isFake") == 1:
+                continue
+            
+            if programme.get("acYear") != year:
+                continue
+            
+            degree_type = self.normalize_degree(programme.get("degrees", ""))
+            code = programme.get("pCode", "").strip()
+            
+            if degree_type == "Master of Science in Engineering":
+                bachelor_programmes.append(code)
+            elif degree_type == "Master of Science":
+                master_programmes.append(code)
+        
+        # Build programs_to_masters mapping
+        programs_to_masters = {}
+        masters_to_programs = {}
+        
+        for prog_code in bachelor_programmes:
+            accredited_masters = self.get_accredited_masters_codes(prog_code, year)
+            if accredited_masters:
+                programs_to_masters[prog_code] = accredited_masters
+                
+                # Build reverse mapping
+                for master_code in accredited_masters:
+                    if master_code not in masters_to_programs:
+                        masters_to_programs[master_code] = []
+                    if prog_code not in masters_to_programs[master_code]:
+                        masters_to_programs[master_code].append(prog_code)
+        
+        # Sort the programs list for each master
+        for master_code in masters_to_programs:
+            masters_to_programs[master_code] = sorted(masters_to_programs[master_code])
+        
+        # Create the bidirectional mapping
+        bidirectional_mapping = {
+            "programs_to_masters": programs_to_masters,
+            "masters_to_programs": masters_to_programs,
+            "metadata": {
+                "academic_year": year,
+                "total_bachelor_programs": len(programs_to_masters),
+                "total_master_programs": len(masters_to_programs),
+                "extraction_timestamp": self._get_timestamp()
+            }
+        }
+        
+        return bidirectional_mapping
+    
+    def save_bidirectional_mapping(self, year: str) -> None:
+        """
+        Save the bidirectional mapping to a JSON file.
+        
+        Args:
+            year: Academic year
+        """
+        # Create output directory
+        output_dir = "Files_created"
+        os.makedirs(output_dir, exist_ok=True)
+        
+        # Generate the mapping
+        mapping_data = self.create_bidirectional_mapping_json(year)
+        
+        # Save to file
+        output_file = os.path.join(output_dir, "program_master_bidirectional_mapping.json")
+        with open(output_file, 'w', encoding='utf-8') as f:
+            json.dump(mapping_data, f, indent=2, ensure_ascii=False)
+        
+        print(f"\n{'='*60}")
+        print("BIDIRECTIONAL MAPPING CREATED")
+        print(f"{'='*60}")
+        print(f"✓ Saved bidirectional mapping to: {output_file}")
+        print(f"📊 Bachelor programs mapped: {mapping_data['metadata']['total_bachelor_programs']}")
+        print(f"📊 Master programs available: {mapping_data['metadata']['total_master_programs']}")
+        
+        # Show some examples
+        programs_to_masters = mapping_data["programs_to_masters"]
+        masters_to_programs = mapping_data["masters_to_programs"]
+        
+        print(f"\n🔍 Example lookups:")
+        if "TKDAT" in programs_to_masters:
+            print(f"  TKDAT can lead to: {programs_to_masters['TKDAT'][:3]}{'...' if len(programs_to_masters['TKDAT']) > 3 else ''}")
+        
+        if masters_to_programs:
+            sample_master = list(masters_to_programs.keys())[0]
+            print(f"  {sample_master} accepts from: {masters_to_programs[sample_master]}")
+        
+        return output_file
+    
     def _find_programme_code_by_name_fuzzy(self, name: str, year: str) -> Optional[str]:
         """
         Find a programme code by its name using fuzzy matching.
@@ -640,6 +743,10 @@ def main():
         
         # Save to JSON files
         analyzer.save_accredited_masters_json(accredited_data, TARGET_YEAR)
+        
+        # Create and save bidirectional mapping
+        print(f"\n🔍 Creating bidirectional mapping...")
+        analyzer.save_bidirectional_mapping(TARGET_YEAR)
         
         print(f"\n{'='*60}")
         print("ANALYSIS COMPLETE")

@@ -44,9 +44,8 @@ PROMPT_CONFIG = {
     "masters_selection_scenario": {"max_tokens": 500, "temperature": 0.6},
     "simple_scenario": {"max_tokens": 300, "temperature": 0.8},
     "emergency_scenario": {"max_tokens": 200, "temperature": 0.5},
-    "chalmers_introduction": {"max_tokens": 400, "temperature": 0.7}  # NEW: Introduction prompt config
+    "chalmers_introduction": {"max_tokens": 400, "temperature": 0.7}
 }
-
 
 # ==================== LLM INITIALIZATION ====================
 
@@ -84,6 +83,284 @@ def initialize_llm():
 
 # Initialize LLM
 llm = initialize_llm()
+
+# ==================== SIMPLIFIED TOOL SYSTEM ====================
+
+# Global tool registry
+_tool_registry = {}
+
+def register_tool(name: str):
+    """Decorator to register tools automatically"""
+    def decorator(cls):
+        _tool_registry[name] = cls
+        logger.info(f"🔧 Registered tool: {name} -> {cls.__name__}")
+        return cls
+    return decorator
+
+class SimplifiedToolBase:
+    """Base class for simplified tools"""
+    
+    def __init__(self, knowledge_loader):
+        self.knowledge = knowledge_loader
+    
+    def execute(self, profile: 'PlayerProfile') -> str:
+        """Execute the tool and return text content for LLM"""
+        raise NotImplementedError
+    
+    def execute_with_debug(self, profile: 'PlayerProfile') -> str:
+        """Execute tool with debugging (matches existing debug system)"""
+        start_time = time.time()
+        
+        try:
+            result = self.execute(profile)
+            processing_time = time.time() - start_time
+            
+            debug_logger.log_tool_execution(
+                tool_name=self.__class__.__name__,
+                parameters={"student_program": profile.program, "student_year": profile.year},
+                raw_result={"content_length": len(result), "content_preview": result[:200]},
+                success=True,
+                processing_time=processing_time
+            )
+            
+            return result
+            
+        except Exception as e:
+            processing_time = time.time() - start_time
+            
+            debug_logger.log_tool_execution(
+                tool_name=self.__class__.__name__,
+                parameters={"student_program": profile.program, "student_year": profile.year},
+                raw_result={},
+                success=False,
+                error=str(e),
+                processing_time=processing_time
+            )
+            
+            raise
+
+# ==================== SPECIFIC TOOLS ====================
+
+@register_tool("sports")
+class SportsTool(SimplifiedToolBase):
+    """Tool for sports and physical activities information"""
+    
+    def execute(self, profile: 'PlayerProfile') -> str:
+        try:
+            sports_file = Path("knowledge") / "sports.txt"
+            if not sports_file.exists():
+                return "Sports information not available."
+            
+            with open(sports_file, 'r', encoding='utf-8') as f:
+                content = f.read()
+            
+            logger.info(f"🏃 Loaded sports.txt ({len(content)} characters)")
+            return content
+            
+        except Exception as e:
+            logger.error(f"Error loading sports.txt: {e}")
+            return "Error loading sports information."
+
+@register_tool("studies")
+class StudiesTool(SimplifiedToolBase):
+    """Tool for study environment, campus information, and student section details"""
+    
+    def execute(self, profile: 'PlayerProfile') -> str:
+        try:
+            # Load main studies information
+            studies_file = Path("knowledge") / "studies.txt"
+            if not studies_file.exists():
+                return "Study information not available."
+            
+            with open(studies_file, 'r', encoding='utf-8') as f:
+                studies_content = f.read()
+            
+            # Get student section information
+            section_info = self._get_student_section_info(profile.program)
+            
+            # Combine the information
+            output_lines = [
+                "=== GENERAL STUDY INFORMATION ===",
+                studies_content,
+                "",
+                "=== STUDENT SECTION INFORMATION ===",
+                section_info
+            ]
+            
+            result = "\n".join(output_lines)
+            logger.info(f"📚 Loaded studies.txt ({len(studies_content)} characters) + student section info ({len(section_info)} characters)")
+            return result
+            
+        except Exception as e:
+            logger.error(f"Error loading study information: {e}")
+            return "Error loading study information."
+    
+    def _get_student_section_info(self, program_code: str) -> str:
+        """Get student section information for the given program"""
+        # Program to student section mapping
+        program_to_section = {
+            "TKATK": "A",       # Architecture and Engineering
+            "TKAUT": "Z",       # Automation and Mechatronics Engineering
+            "TKBIO": "KfKb",    # Bioengineering
+            "TKDAT": "D",       # Computer Science and Engineering
+            "TKDES": "TD",      # Industrial Design Engineering
+            "TKELT": "E",       # Electrical Engineering
+            "TKGBS": "GS",      # Global Systems Engineering
+            "TKIEK": "I",       # Industrial Engineering and Management
+            "TKITE": "IT",      # Software Engineering
+            "TKKEF": "KfKb",    # Chemical Eng. w/ Eng. Physics
+            "TKKMT": "K",       # Chemical Engineering
+            "TKMAS": "M",       # Mechanical Engineering
+            "TKMED": "E",       # Biomedical Engineering
+            "TKSAM": "V",       # Civil Engineering
+            "TKTEM": "F",       # Engineering Mathematics
+            "TKTFY": "F",       # Engineering Physics
+            "TKARK": "A",       # Architecture
+        }
+        
+        # Get the student section code
+        section_code = program_to_section.get(program_code)
+        if not section_code:
+            return f"No student section information found for program {program_code}"
+        
+        # Try to load the student section file
+        try:
+            section_file = Path("knowledge") / "student_sections" / f"{section_code}.txt"
+            if not section_file.exists():
+                logger.warning(f"Student section file not found: {section_file}")
+                return f"Student section information not available for section {section_code}"
+            
+            with open(section_file, 'r', encoding='utf-8') as f:
+                section_content = f.read()
+            
+            logger.info(f"📋 Loaded student section {section_code}.txt ({len(section_content)} characters)")
+            return f"Student Section {section_code} (for {program_code}):\n\n{section_content}"
+            
+        except Exception as e:
+            logger.error(f"Error loading student section {section_code}: {e}")
+            return f"Error loading student section information for {section_code}"
+
+@register_tool("exchange")
+class ExchangeTool(SimplifiedToolBase):
+    """Tool for international exchange opportunities during master's program"""
+    
+    def execute(self, profile: 'PlayerProfile') -> str:
+        try:
+            exchange_file = Path("knowledge") / "exchange.txt"
+            if not exchange_file.exists():
+                return "Exchange information not available."
+            
+            with open(exchange_file, 'r', encoding='utf-8') as f:
+                content = f.read()
+            
+            logger.info(f"✈️ Loaded exchange.txt ({len(content)} characters)")
+            return content
+            
+        except Exception as e:
+            logger.error(f"Error loading exchange.txt: {e}")
+            return "Error loading exchange information."
+
+@register_tool("courses")
+class CoursesTool(SimplifiedToolBase):
+    """Tool for courses available to the student based on their program and year"""
+    
+    def execute(self, profile: 'PlayerProfile') -> str:
+        try:
+            # Load courses for the student's program
+            courses_in_program = self.knowledge.load_json('courses_in_program.json')
+            course_summaries = self.knowledge.load_json('course_summary_simplified.json')
+            
+            if not courses_in_program or not course_summaries:
+                return "Course information not available."
+            
+            # Get program code - if it's already a code, use it. If it's a name, convert it.
+            program_code = self._get_program_code(profile.program)
+            if not program_code:
+                return f"Program code not found for {profile.program}"
+            
+            # Get courses for this program
+            program_courses = courses_in_program.get('programs', {}).get(program_code, {})
+            if not program_courses:
+                return f"No courses found for program {program_code}"
+            
+            # Create course summary lookup
+            course_lookup = {course['courseCode']: course for course in course_summaries}
+            
+            # Build output text
+            output_lines = [
+                f"COURSES AVAILABLE FOR {profile.program} (Program Code: {program_code})",
+                f"Student Year: {profile.year}",
+                "",
+                "COURSE DETAILS:",
+                ""
+            ]
+            
+            # Sort courses by code for consistency
+            for course_code in sorted(program_courses.keys()):
+                study_periods = program_courses[course_code]
+                course_info = course_lookup.get(course_code)
+                
+                if course_info:
+                    output_lines.extend([
+                        f"Course: {course_code} - {course_info['name']}",
+                        f"Study Periods: {', '.join(study_periods)}",
+                        f"Description: {course_info['AI_summary']}",
+                        ""
+                    ])
+                else:
+                    output_lines.extend([
+                        f"Course: {course_code}",
+                        f"Study Periods: {', '.join(study_periods)}",
+                        "Description: Course details not available",
+                        ""
+                    ])
+            
+            result = "\n".join(output_lines)
+            logger.info(f"📝 Generated course information for {program_code}: {len(program_courses)} courses")
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"Error generating course information: {e}")
+            return f"Error loading course information: {str(e)}"
+    
+    def _get_program_code(self, program_identifier: str) -> str:
+        """Get program code - if it's already a code, return it. If it's a name, convert it."""
+        # If it's already a program code (starts with TK or MP), return as-is
+        if program_identifier.startswith(('TK', 'MP', 'TA', 'TI', 'TS', 'KP')):
+            return program_identifier
+        
+        # Program name to code mapping for backward compatibility
+        program_mapping = {
+            # Base programs (Master of Science in Engineering)
+            "Architecture and Engineering": "TKATK",
+            "Automation and Mechatronics Engineering": "TKAUT", 
+            "Bioengineering": "TKBIO",
+            "Computer Science and Engineering": "TKDAT",
+            "Industrial Design Engineering": "TKDES",
+            "Electrical Engineering": "TKELT",
+            "Global Systems Engineering": "TKGBS",
+            "Industrial Engineering and Management": "TKIEK",
+            "Software Engineering": "TKITE",
+            "Chemical Engineering With Engineering Physics": "TKKEF",
+            "Chemical Engineering": "TKKMT",
+            "Mechanical Engineering": "TKMAS",
+            "Biomedical Engineering": "TKMED",
+            "Civil Engineering": "TKSAM",
+            "Engineering Mathematics": "TKTEM",
+            "Engineering Physics": "TKTFY",
+            "Architecture": "TKARK",
+            
+            # Master programs (Master of Science) - common names
+            "Materials Engineering": "MPAEM",
+            "Computer Science": "MPALG",
+            "Applied Mechanics": "MPAME",
+            "Data Science and AI": "MPDSC",
+            "Software Engineering and Technology": "MPSOF",
+            # Add more as needed
+        }
+        
+        return program_mapping.get(program_identifier, program_identifier)
 
 # ==================== UTILITY FUNCTIONS ====================
 
@@ -269,8 +546,119 @@ class KnowledgeLoader:
         self._cache.clear()
         logger.info("🧹 Knowledge cache cleared")
 
+class ProgramMappingService:
+    """Centralized service for mapping program codes to names and descriptions"""
+    
+    def __init__(self, knowledge_loader):
+        self.knowledge = knowledge_loader
+        self._program_cache = {}
+        self._master_cache = {}
+    
+    def get_bachelor_program_info(self, program_code: str) -> Dict[str, str]:
+        """Get bachelor program information by code"""
+        if program_code in self._program_cache:
+            return self._program_cache[program_code]
+        
+        # Load from programs.json
+        programs_data = self.knowledge.load_json('programs.json')
+        if programs_data:
+            # Use the correct structure: programs_data['programs']
+            programs_list = programs_data.get('programs', [])
+            for program in programs_list:
+                code = program.get('code', '')
+                if code == program_code:
+                    result = {
+                        'code': code,
+                        'name': program.get('name', f'Program {code}'),
+                        'explanation': program.get('explanation', 'No description available')
+                    }
+                    self._program_cache[program_code] = result
+                    return result
+        
+        # If not found, return minimal info
+        logger.warning(f"Program {program_code} not found in programs.json")
+        result = {
+            'code': program_code,
+            'name': f'Program {program_code}',
+            'explanation': 'Program information not available'
+        }
+        self._program_cache[program_code] = result
+        return result
+    
+    def get_master_program_info(self, master_code: str) -> Dict[str, str]:
+        """Get master's program information by code"""
+        if master_code in self._master_cache:
+            return self._master_cache[master_code]
+        
+        # Load from masters_programs.json
+        masters_data = self.knowledge.load_json('masters_programs.json')
+        if masters_data:
+            # Use the correct structure: masters_data['programs']
+            programs_list = masters_data.get('programs', [])
+            for program in programs_list:
+                code = program.get('code', '')
+                if code == master_code:
+                    result = {
+                        'code': code,
+                        'name': program.get('name', f'Master\'s Program {code}'),
+                        'description': program.get('explanation', 'Advanced studies in this field')
+                    }
+                    self._master_cache[master_code] = result
+                    return result
+        
+        # If not found, return minimal info
+        logger.warning(f"Master's program {master_code} not found in masters_programs.json")
+        result = {
+            'code': master_code,
+            'name': f'Master\'s Program {master_code}',
+            'description': 'Program information not available'
+        }
+        self._master_cache[master_code] = result
+        return result
+    
+    def get_available_masters_for_bachelor(self, bachelor_code: str) -> List[Dict[str, str]]:
+        """Get all available master's programs for a given bachelor program"""
+        # Load the bidirectional mapping
+        mapping_data = self.knowledge.load_json('program_master_bidirectional_mapping.json')
+        if not mapping_data:
+            logger.warning("Could not load master's program mapping")
+            return []
+        
+        programs_to_masters = mapping_data.get('programs_to_masters', {})
+        available_master_codes = programs_to_masters.get(bachelor_code, [])
+        
+        # Get full info for each master's program
+        master_programs = []
+        for master_code in available_master_codes:
+            master_info = self.get_master_program_info(master_code)
+            master_programs.append(master_info)
+        
+        return master_programs
+    
+    def get_program_code_from_name(self, program_name: str) -> str:
+        """Get program code from program name (for backward compatibility)"""
+        # Load all programs and find matching name
+        programs_data = self.knowledge.load_json('programs.json')
+        if programs_data:
+            # Use the correct structure: programs_data['programs']
+            programs_list = programs_data.get('programs', [])
+            for program in programs_list:
+                if program.get('name') == program_name:
+                    return program.get('code', program_name)
+        
+        # If not found, log warning and return the name as-is
+        logger.warning(f"Program name '{program_name}' not found in programs.json")
+        return program_name
+    
+    def clear_cache(self):
+        """Clear the program mapping cache"""
+        self._program_cache.clear()
+        self._master_cache.clear()
+        logger.info("🧹 Program mapping cache cleared")
+
 # Global knowledge loader
 knowledge = KnowledgeLoader()
+program_mapping = ProgramMappingService(knowledge)
 
 # ==================== DATA MODELS ====================
 
@@ -649,265 +1037,7 @@ class ProfileUpdateService:
         except Exception as e:
             logger.error(f"Error updating current situation: {e}")
 
-# ==================== DIRECTOR TOOLS ====================
-
-class DirectorTool(ABC):
-    """Abstract base class for director tools"""
-    
-    @property
-    @abstractmethod
-    def name(self) -> str:
-        """Tool name"""
-        pass
-    
-    @property
-    @abstractmethod
-    def description(self) -> str:
-        """Tool description for the AI"""
-        pass
-    
-    @abstractmethod
-    def execute(self, profile: PlayerProfile, **kwargs) -> Dict[str, Any]:
-        """Execute the tool"""
-        pass
-
-    def execute_with_debug(self, profile: PlayerProfile, **kwargs) -> Dict[str, Any]:
-        """Execute tool with debugging"""
-        start_time = time.time()
-        
-        try:
-            result = self.execute(profile, **kwargs)
-            processing_time = time.time() - start_time
-            
-            debug_logger.log_tool_execution(
-                tool_name=self.name,
-                parameters=kwargs,
-                raw_result=result,
-                success=True,
-                processing_time=processing_time
-            )
-            
-            return result
-            
-        except Exception as e:
-            processing_time = time.time() - start_time
-            
-            debug_logger.log_tool_execution(
-                tool_name=self.name,
-                parameters=kwargs,
-                raw_result={},
-                success=False,
-                error=str(e),
-                processing_time=processing_time
-            )
-            
-            raise
-
-class GetMastersProgramsTool(DirectorTool):
-    """Tool to get available master's programs for the student's bachelor program"""
-
-    @property
-    def name(self) -> str:
-        return "get_masters_programs"
-
-    @property
-    def description(self) -> str:
-        return "Get available master's programs for the student's bachelor program."
-
-    def execute(self, profile: PlayerProfile, **kwargs) -> Dict[str, Any]:
-        masters_data = knowledge.load_json('masters_programs.json')
-        all_programs = masters_data.get('masters_programs', [])
-
-        # Filter programs that are eligible for the student's bachelor program
-        available_programs = [
-            p for p in all_programs if profile.program in p.get('eligible_programs', [])
-        ]
-
-        # Optional difficulty filter
-        difficulty = kwargs.get('difficulty_level')
-        if difficulty:
-            available_programs = [
-                p for p in available_programs if p.get('difficulty', 'medium') == difficulty
-            ]
-
-        recommendations = self._generate_recommendations(profile, available_programs)
-
-        return {
-            "bachelor_program": profile.program,
-            "available_masters": available_programs,
-            "total_programs": len(available_programs),
-            "recommendations": recommendations,
-            "student_year": profile.year,
-            "ready_for_selection": profile.year >= 3
-        }
-
-    def _generate_recommendations(self, profile: PlayerProfile, programs: List[Dict]) -> List[Dict]:
-        choices_text = ' '.join(profile.life_choices).lower()
-        recommendations = []
-
-        for program in programs:
-            match_score = 0
-            reasons = []
-            program_name = program.get('name', '').lower()
-
-            for specialization in program.get('specializations', []):
-                if any(word in choices_text for word in specialization.lower().split() if len(word) > 3):
-                    match_score += 2
-                    reasons.append(f"Interest in {specialization.lower()}")
-                    break
-
-            for career in program.get('career_paths', []):
-                if any(word in choices_text for word in career.lower().split() if len(word) > 3):
-                    match_score += 1
-                    reasons.append(f"Aligns with {career.lower()} path")
-                    break
-
-            keyword_hits = sum(
-                1 for kw in ['robotics', 'software', 'ai', 'energy', 'entrepreneurship']
-                if kw in program_name and kw in choices_text
-            )
-            if keyword_hits:
-                match_score += 3
-                reasons.append("Relevant to your previous experiences")
-
-            # Academic focus
-            academic_signals = sum(
-                1 for word in ['academic', 'study', 'research', 'grade']
-                if any(word in choice.lower() for choice in profile.life_choices)
-            )
-            if program.get('difficulty') == 'high' and academic_signals >= 2:
-                match_score += 1
-                reasons.append("Good for strong academic profile")
-
-            # Practical focus
-            if program.get('difficulty') == 'low' and academic_signals == 0:
-                match_score += 1
-                reasons.append("Suited for hands-on focus")
-
-            # Leadership/industry experience
-            leadership = sum(
-                1 for word in ['leadership', 'team', 'organize', 'manage', 'social']
-                if any(word in choice.lower() for choice in profile.life_choices)
-            )
-            if leadership >= 2 and any(k in program_name for k in ['management', 'entrepreneurship']):
-                match_score += 2
-                reasons.append("Fits your leadership background")
-
-            if match_score > 0:
-                recommendations.append({
-                    "program": program,
-                    "match_score": match_score,
-                    "reasons": list(set(reasons)),
-                    "recommendation_level": "high" if match_score >= 5 else "medium" if match_score >= 3 else "low"
-                })
-
-        return sorted(recommendations, key=lambda x: x['match_score'], reverse=True)[:4]
-
-
-
-class GetCoursesTool(DirectorTool):
-    """Tool to get available courses for a program"""
-    
-    @property
-    def name(self) -> str:
-        return "get_courses"
-    
-    @property
-    def description(self) -> str:
-        return "Get available courses for the student's program. Use this when creating course selection scenarios."
-    
-    def execute(self, profile: PlayerProfile, **kwargs) -> Dict[str, Any]:
-        courses = knowledge.load_json('chalmers_courses.json')
-        program_courses = courses.get(profile.program, {})
-        
-        # Get courses for current year
-        year_key = f'year_{profile.year}'
-        year_courses = program_courses.get(year_key, {})
-        
-        return {
-            "core_courses": year_courses.get('core', []),
-            "electives": year_courses.get('electives', []),
-            "program": profile.program,
-            "year": profile.year
-        }
-
-class GetOrganizationsTool(DirectorTool):
-    """Tool to get student organizations"""
-    
-    @property
-    def name(self) -> str:
-        return "get_organizations"
-    
-    @property
-    def description(self) -> str:
-        return "Get student organizations and clubs. Use this for social opportunities and extracurricular activities."
-    
-    def execute(self, profile: PlayerProfile, **kwargs) -> Dict[str, Any]:
-        orgs = knowledge.load_json('student_organizations.json')
-        
-        # Filter by interest if specified
-        interest_filter = kwargs.get('interest_category')
-        if interest_filter and interest_filter in orgs:
-            return {interest_filter: orgs[interest_filter]}
-        
-        return orgs
-
-class GetCompaniesTool(DirectorTool):
-    """Tool to get companies for internships and career opportunities"""
-    
-    @property
-    def name(self) -> str:
-        return "get_companies"
-    
-    @property
-    def description(self) -> str:
-        return "Get companies offering internships and career opportunities. Use for career preparation and summer plans."
-    
-    def _get_program_category(self, program_name: str) -> str:
-        """Categorize programs for better scenario matching using JSON data"""
-        try:
-            programs_data = knowledge.load_json('programs.json')
-            programs = programs_data.get('chalmers_engineering_programs', [])
-            
-            for program in programs:
-                if program.get('name') == program_name:
-                    field = program.get('field', '')
-                    if any(keyword in field.lower() for keyword in ['computer', 'information', 'automation', 'electrical']):
-                        return 'tech'
-                    elif any(keyword in field.lower() for keyword in ['mechanical', 'civil', 'chemical']):
-                        return 'engineering'
-                    elif any(keyword in field.lower() for keyword in ['architecture', 'design']):
-                        return 'design'
-                    elif any(keyword in field.lower() for keyword in ['physics', 'mathematics', 'global']):
-                        return 'science'
-                    elif any(keyword in field.lower() for keyword in ['biotechnology', 'medical']):
-                        return 'bio'
-                    else:
-                        return 'general'
-            return 'general'
-        except Exception as e:
-            logger.warning(f"Error loading programs.json for categorization: {e}")
-            return 'general'
-    
-    def execute(self, profile: PlayerProfile, **kwargs) -> Dict[str, Any]:
-        companies = knowledge.load_json('gothenburg_companies.json')
-        
-        # Enhanced filtering by program relevance AND category
-        program_category = self._get_program_category(profile.program)
-        
-        relevant_companies = {}
-        for industry, company_list in companies.items():
-            relevant_companies[industry] = []
-            for company in company_list:
-                relevant_programs = company.get('relevant_programs', [])
-                relevant_categories = company.get('relevant_categories', [])
-                
-                if (profile.program in relevant_programs or 
-                    program_category in relevant_categories or
-                    'All programs' in relevant_programs):
-                    relevant_companies[industry].append(company)
-        
-        return relevant_companies
+# ==================== PROGRAM EXPLANATION HELPER ====================
 
 class GetProgramsExplanation:
     """Helper to extract program explanations from programs.json"""
@@ -926,402 +1056,56 @@ class GetProgramsExplanation:
         except Exception as e:
             logger.warning(f"Error fetching program explanation for {program_name}: {e}")
             return 'Program explanation not available.'
-        
-
-class GetUniversitySystemTool(DirectorTool):
-    """Tool to get Swedish university system information"""
-    
-    @property
-    def name(self) -> str:
-        return "get_university_system"
-    
-    @property
-    def description(self) -> str:
-        return "Get information about Swedish university system, grading scale, academic calendar, degree requirements, and university culture. Use when creating scenarios about academic progression, grades, or university procedures."
-    
-    def execute(self, profile: PlayerProfile, **kwargs) -> Dict[str, Any]:
-        system_info = knowledge.load_json('swedish_university_info.json')
-        
-        # Filter by topic if specified
-        topic = kwargs.get('topic')
-        if topic and topic in system_info:
-            return {topic: system_info[topic]}
-        
-        return system_info
-
-class GetDegreeRequirementsTool(DirectorTool):
-    """Tool to check degree requirements for student's program"""
-    
-    @property
-    def name(self) -> str:
-        return "get_degree_requirements"
-    
-    @property
-    def description(self) -> str:
-        return "Check degree requirements, credit requirements, mandatory courses, and graduation criteria for the student's program. Use when creating scenarios about course planning or academic milestones."
-    
-    def execute(self, profile: PlayerProfile, **kwargs) -> Dict[str, Any]:
-        # Get program-specific requirements
-        courses = knowledge.load_json('chalmers_courses.json')
-        program_info = courses.get(profile.program, {})
-        
-        # Calculate completion status
-        total_courses_taken = len([choice for choice in profile.life_choices if 'course' in choice.lower()])
-        
-        requirements = {
-            "program": profile.program,
-            "current_year": profile.year,
-            "total_years": 5,  # Master's program
-            "courses_taken": total_courses_taken,
-            "graduation_requirements": {
-                "bachelor_credits": 180,
-                "master_credits": 120,
-                "thesis_required": True,
-                "internship_recommended": True
-            }
-        }
-        
-        # Add specific program requirements if available
-        if program_info:
-            requirements["program_structure"] = program_info
-        
-        return requirements
-
-class GetAcademicCalendarTool(DirectorTool):
-    """Tool to get academic calendar information"""
-    
-    @property
-    def name(self) -> str:
-        return "get_academic_calendar"
-    
-    @property
-    def description(self) -> str:
-        return "Get academic calendar information including exam periods, registration deadlines, holidays, and semester structure. Use for time-sensitive scenarios and academic planning."
-    
-    def execute(self, profile: PlayerProfile, **kwargs) -> Dict[str, Any]:
-        calendar = knowledge.load_json('academic_calendar.json')
-        
-        # If no file exists, provide typical Swedish academic calendar
-        if not calendar:
-            calendar = {
-                "current_period": "Autumn semester",
-                "upcoming_deadlines": [
-                    {"event": "Course registration", "date": "Early August", "importance": "high"},
-                    {"event": "First exam period", "date": "October", "importance": "medium"},
-                    {"event": "Winter break", "date": "December-January", "importance": "low"},
-                    {"event": "Final exams", "date": "January", "importance": "high"}
-                ],
-                "semester_structure": {
-                    "autumn": "September - January",
-                    "spring": "January - June",
-                    "summer": "June - August (optional courses)"
-                },
-                "important_periods": [
-                    "Registration: July-August",
-                    "Midterm exams: October/March", 
-                    "Final exams: January/May-June",
-                    "Thesis deadlines: May/October"
-                ]
-            }
-        
-        return calendar
-
-
-
-class GetCampusFacilitiesTool(DirectorTool):
-    """Tool to get campus facilities information"""
-    
-    @property
-    def name(self) -> str:
-        return "get_campus_facilities"
-    
-    @property
-    def description(self) -> str:
-        return "Get campus facilities like libraries, labs, study spaces, sports facilities, restaurants. Use for scenarios about where to study, work on projects, or spend time on campus."
-    
-    def execute(self, profile: PlayerProfile, **kwargs) -> Dict[str, Any]:
-        facilities = knowledge.load_json('campus_facilities.json')
-        
-        # If no file exists, provide basic facilities
-        if not facilities:
-            facilities = {
-                "libraries": [
-                    {"name": "Architecture and Civil Engineering Library", "specialty": "Engineering resources"},
-                    {"name": "Math and Science Library", "specialty": "Technical literature"},
-                    {"name": "Central Library", "specialty": "General collection"}
-                ],
-                "labs": [
-                    {"name": "Computer Labs", "equipment": "High-end workstations, specialized software"},
-                    {"name": "Engineering Labs", "equipment": "Testing equipment, prototyping tools"},
-                    {"name": "Project Rooms", "equipment": "Collaborative spaces, whiteboards"}
-                ],
-                "study_spaces": [
-                    {"name": "Group Study Rooms", "capacity": "4-8 people"},
-                    {"name": "Silent Study Areas", "capacity": "Individual work"},
-                    {"name": "Collaborative Spaces", "capacity": "Flexible seating"}
-                ],
-                "other": [
-                    {"name": "Student Union Building", "services": "Food, social activities"},
-                    {"name": "Sports Center", "facilities": "Gym, courts, pool"},
-                    {"name": "Maker Space", "equipment": "3D printers, electronics lab"}
-                ]
-            }
-        
-        # Filter by facility type if specified
-        facility_type = kwargs.get('facility_type')
-        if facility_type and facility_type in facilities:
-            return {facility_type: facilities[facility_type]}
-        
-        return facilities
-
-class GetStudyAbroadTool(DirectorTool):
-    """Tool to get study abroad opportunities"""
-    
-    @property
-    def name(self) -> str:
-        return "get_study_abroad"
-    
-    @property
-    def description(self) -> str:
-        return "Get study abroad opportunities, exchange programs, and international experiences. Use when student is ready for global opportunities."
-    
-    def execute(self, profile: PlayerProfile, **kwargs) -> Dict[str, Any]:
-        abroad_programs = knowledge.load_json('study_abroad_programs.json')
-        
-        # If no file exists, provide typical programs
-        if not abroad_programs:
-            abroad_programs = {
-                "erasmus_programs": [
-                    {"university": "TU Delft", "country": "Netherlands", "specialty": "Engineering", "duration": "1 semester"},
-                    {"university": "ETH Zurich", "country": "Switzerland", "specialty": "Technology", "duration": "1 year"},
-                    {"university": "Technical University of Munich", "country": "Germany", "specialty": "Engineering", "duration": "1 semester"}
-                ],
-                "global_programs": [
-                    {"university": "MIT", "country": "USA", "specialty": "Technology", "duration": "Summer program"},
-                    {"university": "University of Tokyo", "country": "Japan", "specialty": "Robotics", "duration": "1 semester"},
-                    {"university": "National University of Singapore", "country": "Singapore", "specialty": "Engineering", "duration": "1 semester"}
-                ],
-                "requirements": {
-                    "minimum_year": 2,
-                    "gpa_requirement": "Good academic standing",
-                    "language_requirements": "English proficiency"
-                }
-            }
-        
-        # Filter by region if specified
-        region = kwargs.get('region')
-        if region:
-            filtered_programs = {}
-            for program_type, programs in abroad_programs.items():
-                if isinstance(programs, list):
-                    filtered = [p for p in programs if region.lower() in p.get('country', '').lower()]
-                    if filtered:
-                        filtered_programs[program_type] = filtered
-            return filtered_programs if filtered_programs else abroad_programs
-        
-        return abroad_programs
-
-class CheckPrerequisitesTool(DirectorTool):
-    """Tool to check prerequisites for courses or opportunities"""
-    
-    @property
-    def name(self) -> str:
-        return "check_prerequisites"
-    
-    @property
-    def description(self) -> str:
-        return "Check if student has completed prerequisites for advanced courses, programs, or opportunities. Use to determine what options are realistically available."
-    
-    def execute(self, profile: PlayerProfile, **kwargs) -> Dict[str, Any]:
-        # Analyze student's background
-        total_choices = len(profile.life_choices)
-        has_technical_focus = any('technical' in choice.lower() or 'programming' in choice.lower() for choice in profile.life_choices)
-        has_social_experience = any('social' in choice.lower() or 'club' in choice.lower() or 'organization' in choice.lower() for choice in profile.life_choices)
-        has_industry_experience = any('internship' in choice.lower() or 'company' in choice.lower() for choice in profile.life_choices)
-        
-        prerequisites = {
-            "year": profile.year,
-            "total_experiences": total_choices,
-            "qualifications": {
-                "advanced_courses": profile.year >= 2,
-                "thesis_projects": profile.year >= 3,
-                "study_abroad": profile.year >= 2 and total_choices >= 3,
-                "leadership_roles": has_social_experience,
-                "research_opportunities": has_technical_focus and profile.year >= 2,
-                "industry_internships": profile.year >= 2,
-                "master_programs": profile.year >= 4,
-                "phd_programs": profile.year >= 4 and has_technical_focus
-            },
-            "recommendations": []
-        }
-        
-        # Add specific recommendations
-        if not has_social_experience:
-            prerequisites["recommendations"].append("Consider joining student organizations to build social skills")
-        if not has_technical_focus and profile.program in ["Computer Science and Engineering", "Electrical Engineering"]:
-            prerequisites["recommendations"].append("Focus on technical skill development")
-        if profile.year >= 3 and not has_industry_experience:
-            prerequisites["recommendations"].append("Seek internship opportunities for industry experience")
-        
-        return prerequisites
-
 
 # ==================== GAME DIRECTOR ====================
 
 class GameDirector:
-    """AI Director that decides what happens next in the game"""
+    """Simplified Game Director using the new tool system"""
     
-    def __init__(self, llm):
+    def __init__(self, llm, knowledge_loader):
         self.llm = llm
-        self.tools = {
-            # Core university data tools
-            'get_courses': GetCoursesTool(),
-            'get_organizations': GetOrganizationsTool(),
-            'get_companies': GetCompaniesTool(),
-            'get_university_system': GetUniversitySystemTool(),
-            'get_degree_requirements': GetDegreeRequirementsTool(),
-            'get_campus_facilities': GetCampusFacilitiesTool(),
-            'get_academic_calendar': GetAcademicCalendarTool(),
-            'get_study_abroad': GetStudyAbroadTool(),
-            
-            # Master's program selection tools
-            'get_masters_programs': GetMastersProgramsTool(),
-            
-            # Analysis and decision support tools
-            'check_prerequisites': CheckPrerequisitesTool(),
-        }
-
-    def _get_tool_descriptions(self) -> str:
-        """Get descriptions of all available tools"""
-        tool_descriptions = []
-        for tool_name, tool in self.tools.items():
-            tool_descriptions.append(f"- {tool_name}: {tool.description}")
-        return "\n".join(tool_descriptions)
+        self.knowledge = knowledge_loader
+        self.tools = self._initialize_tools()
     
-    def _execute_tool(self, tool_name: str, profile: PlayerProfile, **kwargs) -> Dict[str, Any]:
-        """Execute a specific tool with debugging"""
+    def _initialize_tools(self) -> Dict[str, SimplifiedToolBase]:
+        """Initialize all registered tools"""
+        tools = {}
+        for tool_name, tool_class in _tool_registry.items():
+            tools[tool_name] = tool_class(self.knowledge)
+            logger.info(f"🔧 Initialized tool: {tool_name}")
+        
+        logger.info(f"🎬 Director initialized with {len(tools)} tools")
+        return tools
+    
+    def _get_tool_descriptions(self) -> str:
+        """Get descriptions of all available tools for LLM prompts"""
+        descriptions = []
+        for tool_name, tool in self.tools.items():
+            # Get description from docstring
+            description = tool.__class__.__doc__ or f"Tool for {tool_name}"
+            descriptions.append(f"- {tool_name}: {description.strip()}")
+        
+        return "\n".join(descriptions)
+    
+    def _execute_tool(self, tool_name: str, profile: PlayerProfile) -> str:
+        """Execute a specific tool"""
         if tool_name not in self.tools:
             logger.warning(f"🔧 Tool '{tool_name}' not found")
-            return {"error": f"Tool '{tool_name}' not found"}
+            return f"Tool '{tool_name}' not available"
         
         try:
-            logger.info(f"🔧 TOOL EXECUTION: {tool_name}")
-            if kwargs:
-                logger.info(f"   Parameters: {kwargs}")
+            logger.info(f"🔧 EXECUTING TOOL: {tool_name}")
+            logger.info(f"   Student: {profile.name} ({profile.program}, Year {profile.year})")
             
-            # Use debug-enhanced execution
-            result = self.tools[tool_name].execute_with_debug(profile, **kwargs)
+            result = self.tools[tool_name].execute_with_debug(profile)
             
-            # Log summary of results
-            if 'error' not in result:
-                if tool_name == 'get_courses':
-                    electives = result.get('electives', [])
-                    logger.info(f"   → Found {len(electives)} elective courses for {result.get('program', 'unknown')} Year {result.get('year', 'unknown')}")
-                elif tool_name == 'get_organizations':
-                    total_orgs = sum(len(orgs) for orgs in result.values() if isinstance(orgs, list))
-                    categories = list(result.keys())
-                    logger.info(f"   → Found {total_orgs} organizations across {len(categories)} categories: {', '.join(categories)}")
-                elif tool_name == 'get_companies':
-                    total_companies = sum(len(companies) for companies in result.values() if isinstance(companies, list))
-                    industries = list(result.keys())
-                    logger.info(f"   → Found {total_companies} companies across {len(industries)} industries: {', '.join(industries)}")
-                elif tool_name == 'get_masters_programs':
-                    available = result.get('available_masters', [])
-                    recommendations = result.get('recommendations', [])
-                    logger.info(f"   → Found {len(available)} available master's programs with {len(recommendations)} recommendations")
-                elif tool_name == 'get_history_context':
-                    activities = result.get('activities_already_done', [])
-                    warnings = result.get('repetition_warnings', [])
-                    logger.info(f"   → Student has done {len(activities)} activities with {len(warnings)} repetition warnings")
-                elif tool_name == 'analyze_progress':
-                    choices = result.get('total_choices', 0)
-                    missing = result.get('missing_areas', [])
-                    logger.info(f"   → Student has {choices} choices, missing areas: {', '.join(missing)}")
-            else:
-                logger.error(f"   → Tool error: {result['error']}")
-            
+            logger.info(f"   → Success: {len(result)} characters returned")
             return result
+            
         except Exception as e:
             logger.error(f"Error executing tool {tool_name}: {e}")
-            return {"error": str(e)}
-
-    def _make_llm_call_with_retry(self, messages: List[Dict], call_type: str, prompt_name: str, max_retries: int = 3) -> str:
-        """Make LLM call with retry logic"""
-        
-        for attempt in range(max_retries):
-            try:
-                logger.info(f"🤖 LLM CALL ATTEMPT {attempt + 1}/{max_retries} ({call_type})")
-                
-                response = make_llm_call(messages, call_type=call_type, prompt_name=prompt_name)
-                
-                # Basic validation - check if response is not empty and seems reasonable
-                if not response or len(response.strip()) < 10:
-                    raise ValueError(f"LLM response too short or empty: {len(response)} characters")
-                
-                logger.info(f"🤖 LLM CALL SUCCESS on attempt {attempt + 1}")
-                return response
-                
-            except Exception as e:
-                logger.warning(f"🤖 LLM CALL FAILED (attempt {attempt + 1}): {e}")
-                
-                # If this was the last attempt, we'll fall through to return None
-                if attempt == max_retries - 1:
-                    logger.error(f"🤖 LLM CALL FAILED after {max_retries} attempts")
-                    break
-                
-                # Wait a bit before retrying (exponential backoff)
-                wait_time = 0.5 * (2 ** attempt)
-                logger.info(f"🤖 Waiting {wait_time}s before retry...")
-                time.sleep(wait_time)
-        
-        return None
-
-    def _create_ai_crash_fallback(self, profile: PlayerProfile) -> Dict[str, Any]:
-        """Create a humorous fallback when the AI has completely crashed"""
-        
-        crash_situations = [
-            f"The AI Director has blue-screened while trying to figure out what {profile.name} should do next. In the confusion, three random choices have appeared:",
-            f"ERROR 404: Plot not found. The AI Director is currently stuck in an infinite loop thinking about {profile.name}'s future. Please choose from these emergency backup options:",
-            f"The AI Director has gone for a coffee break after encountering a 'critical thinking error'. While we wait for it to return, here are some placeholder choices:",
-            f"SYSTEM MALFUNCTION: The AI Director tried to process {profile.name}'s complex personality and promptly gave up. These generic choices have been auto-generated instead:",
-            f"The AI Director is experiencing technical difficulties (probably tried to divide by zero while calculating {profile.name}'s future). Emergency choices activated:",
-            f"🚨 EMERGENCY PROTOCOL ACTIVATED 🚨 The AI Director has crashed spectacularly while analyzing {profile.name}'s situation. Manual override engaged:",
-            f"The AI Director attempted to understand {profile.name}'s life choices and immediately filed for early retirement. Backup choices loading..."
-        ]
-        
-        crash_options = [
-            {
-                "id": "choice_1_crash",
-                "description": "Choose Option 1 (The AI doesn't know what this does)",
-                "character_implication": "somehow affects your character in mysterious ways"
-            },
-            {
-                "id": "choice_2_crash", 
-                "description": "Choose Option 2 (This might be related to your studies? Maybe?)",
-                "character_implication": "does something vaguely academic-sounding"
-            },
-            {
-                "id": "choice_3_crash",
-                "description": "Choose Option 3 (The AI is just guessing at this point)",
-                "character_implication": "results in unpredictable character development"
-            },
-            {
-                "id": "reboot_ai",
-                "description": "Try to reboot the AI Director (50% chance of success, 50% chance of making things worse)",
-                "character_implication": "either fixes the AI or causes even more chaos"
-            }
-        ]
-        
-        # Pick a random crash situation
-        situation = random.choice(crash_situations)
-        
-        return {
-            "type": "ai_crash",
-            "title": "🤖 AI DIRECTOR MALFUNCTION 🤖",
-            "situation": situation,
-            "options": crash_options
-        }
-
+            return f"Error executing {tool_name}: {str(e)}"
+    
     def should_trigger_masters_selection(self, profile: PlayerProfile) -> bool:
         """Check if we should trigger master's program selection when transitioning 3->4"""
         # Only trigger when student is exactly in year 3 and about to advance to year 4
@@ -1341,69 +1125,158 @@ class GameDirector:
         # If they have 5 choices (end of year 3 with 2 choices per year), they should select master's before year 4
         return choices_count >= 5
 
-    def create_masters_selection_scenario(self, profile: PlayerProfile) -> Dict[str, Any]:
-        """Create a master's program selection scenario"""
+    def should_trigger_exchange_scenario(self, profile: PlayerProfile) -> bool:
+        """Check if we should trigger exchange scenario - only during master's, 50% chance"""
+        # Only trigger during master's years (Year 4 or 5)
+        if profile.year < 4:
+            return False
         
-        # Get available programs using the tool
-        programs_data = self._execute_tool('get_masters_programs', profile)
+        # Don't trigger if already done exchange
+        if any('exchange' in choice.lower() for choice in profile.life_choices):
+            return False
         
-        available_programs = programs_data.get('available_masters', [])
-        recommendations = programs_data.get('recommendations', [])
+        # Don't trigger if already seen exchange decision
+        if any('abroad' in choice.lower() or 'international' in choice.lower() for choice in profile.life_choices):
+            return False
         
-        if not available_programs:
+        # 50% chance trigger - use student name as seed for consistency
+        import hashlib
+        seed = hashlib.md5(f"{profile.name}_exchange_{profile.year}".encode()).hexdigest()
+        # Convert first 8 chars of hash to int, check if even (50% chance)
+        return int(seed[:8], 16) % 2 == 0
+
+    def create_exchange_scenario(self, profile: PlayerProfile) -> Dict[str, Any]:
+        """Create an exchange opportunity scenario"""
+        
+        # Get exchange information using the tool
+        exchange_info = self._execute_tool('exchange', profile)
+        
+        if "not available" in exchange_info or "Error" in exchange_info:
             return self._create_ai_crash_fallback(profile)
         
-        # Create urgency text
-        urgency_text = "It's time to choose your master's program!" if profile.year == 4 else "You need to select your master's specialization before advancing to Year 4."
+        # Create urgency text based on year
+        if profile.year == 4:
+            urgency_text = "It's the perfect time to consider an international exchange for your master's program!"
+        else:
+            urgency_text = "This might be your last chance to do an exchange before graduation."
         
-        # Use simple prompt loading
-        situation = load_prompt(
-            'masters_selection_scenario',
-            student_name=profile.name,
-            year=profile.year,
-            program=profile.program,
-            urgency_text=urgency_text,
-            available_programs_count=len(available_programs),
-            recommendations_count=len(recommendations)
-        )
+        # Use simple prompt loading for exchange scenario
+        try:
+            situation = load_prompt(
+                'exchange_scenario',
+                student_name=profile.name,
+                year=profile.year,
+                program=profile.program,
+                urgency_text=urgency_text,
+                exchange_info=exchange_info[:500]  # Truncate for prompt
+            )
+        except:
+            # Fallback if prompt doesn't exist
+            situation = f"{urgency_text} The international office has presented you with several exciting exchange opportunities for your master's studies."
         
-        # Create options from available programs (limit to 4 for UI)
-        options = []
-        
-        # Include top recommendations first
-        recommended_programs = [rec['program'] for rec in recommendations[:2]]
-        other_programs = [p for p in available_programs if p not in recommended_programs]
-        
-        # Take top 2 recommendations + 2 others
-        selected_programs = recommended_programs + other_programs[:2]
-        
-        for i, program in enumerate(selected_programs[:4]):
-            option_text = f"Choose {program['name']} ({program['code']}) - {program['description']}"
-            
-            # Add recommendation note if it's recommended
-            if program in recommended_programs:
-                option_text += f" [Recommended based on your background]"
-            
-            options.append({
-                "id": f"masters_{program['code'].lower()}",
-                "description": option_text,
-                "character_implication": f"Specializes in {program['name']}, developing expertise in {', '.join(program['specializations'][:2])} and preparing for careers in {', '.join(program['career_paths'][:2])}"
-            })
+        # Create exchange options
+        options = [
+            {
+                "id": "exchange_europe",
+                "description": "Apply for Erasmus+ exchange to a top European technical university (ETH Zurich, TU Delft, or RWTH Aachen)",
+                "character_implication": "gains international perspective, builds European network, experiences different academic culture while staying relatively close to home"
+            },
+            {
+                "id": "exchange_usa",
+                "description": "Pursue exchange at a prestigious US university (MIT, Stanford, UC Berkeley) despite higher costs",
+                "character_implication": "experiences Silicon Valley innovation culture, builds transatlantic connections, develops confidence in high-pressure academic environment"
+            },
+            {
+                "id": "exchange_asia",
+                "description": "Choose an Asian destination (NUS Singapore, University of Tokyo) for unique cultural immersion",
+                "character_implication": "develops global mindset, learns to adapt to very different culture, gains perspective on technology in Asian markets"
+            },
+            {
+                "id": "no_exchange",
+                "description": "Decide to stay at Chalmers and focus on building deeper connections locally and with research groups",
+                "character_implication": "strengthens local network, gets more involved in Chalmers research, maintains stability in relationships and familiar environment"
+            }
+        ]
         
         return {
-            "type": "masters_selection",
-            "title": f"Master's Program Selection - Year {profile.year}",
+            "type": "exchange_decision",
+            "title": f"International Exchange Opportunity - Year {profile.year}",
             "situation": situation,
             "options": options,
             "metadata": {
-                "all_programs": available_programs,
-                "recommendations": recommendations,
-                "selection_year": profile.year
+                "exchange_year": profile.year,
+                "exchange_info": exchange_info
             }
         }
 
+    def create_masters_selection_scenario(self, profile: PlayerProfile) -> Dict[str, Any]:
+        """Create a master's program selection scenario using centralized mapping"""
+        
+        try:
+            # Get the student's bachelor program code
+            program_code = profile.program
+            
+            # Get available master's programs using centralized service
+            available_masters = program_mapping.get_available_masters_for_bachelor(program_code)
+            
+            if not available_masters:
+                logger.warning(f"No master's programs found for bachelor program: {program_code}")
+                return self._create_ai_crash_fallback(profile)
+            
+            # Limit to 6 options to avoid overwhelming UI
+            master_programs = available_masters[:6]
+            
+            # Get bachelor program info for the situation text
+            bachelor_info = program_mapping.get_bachelor_program_info(program_code)
+            
+            # Create the situation text
+            situation_text = f"""
+            Congratulations {profile.name}! You've successfully completed your bachelor's degree in {bachelor_info['name']}.
+            
+            Now it's time to choose your master's specialization - a decision that will shape your expertise and career path. 
+            Based on your background in {bachelor_info['name']}, you have access to {len(available_masters)} excellent master's programs at Chalmers.
+            
+            Each program offers unique opportunities for advanced study, research, and industry connections. 
+            Consider your interests, career goals, and the skills you want to develop over the next two years.
+            
+            Your choice here will determine your courses, thesis project, and the specialized knowledge you'll graduate with.
+            """.strip()
+            
+            # Create options for each available master's program
+            options = []
+            for program in master_programs:
+                options.append({
+                    "id": f"masters_{program['code']}",
+                    "description": f"Specialize in {program['name']} ({program['code']})",
+                    "character_implication": f"becomes an expert in {program['name'].lower()}, gaining deep knowledge in {program['description']}"
+                })
+            
+            # Add an option to explore more if there are many programs available
+            if len(available_masters) > 6:
+                options.append({
+                    "id": "masters_explore",
+                    "description": f"Explore more master's programs (you have {len(available_masters)} total options available)",
+                    "character_implication": "takes a thoughtful approach to major decisions, carefully researching all available options"
+                })
+            
+            return {
+                "type": "masters_selection",
+                "title": f"🎓 Master's Program Selection - Year {profile.year}",
+                "situation": situation_text,
+                "options": options,
+                "metadata": {
+                    "bachelor_program": program_code,
+                    "available_programs": master_programs,
+                    "selection_year": profile.year
+                }
+            }
+            
+        except Exception as e:
+            logger.error(f"Error creating master's selection scenario: {e}")
+            return self._create_ai_crash_fallback(profile)
+
     def decide_next_scenario(self, profile: PlayerProfile) -> Dict[str, Any]:
-        """Simplified scenario decision using pre-processed profile summaries"""
+        """Main scenario decision method - keep your existing logic but update tool calls"""
         
         # Add recursion prevention
         if hasattr(self, '_generating_scenario') and self._generating_scenario:
@@ -1420,7 +1293,6 @@ class GameDirector:
             debug_logger.start_scenario_generation(session_id, profile)
             
             logger.info(f"🎬 DIRECTOR STARTING: Decision for {profile.name} ({profile.program}, Year {profile.year})")
-            logger.info(f"🐛 DEBUG: Using session_id: {session_id}")
             
             # Check if student should advance year first
             year_advanced = profile.advance_year()
@@ -1434,15 +1306,12 @@ class GameDirector:
                 debug_logger.complete_scenario_generation(scenario, True, total_time=0.0)
                 return scenario
             
-            logger.info(f"   Current situation: {profile.current_situation}")
-            logger.info(f"   Personality: {profile.personality_description}")
-            logger.info(f"   Choices made so far: {len(profile.life_choices)}")
-            
-            # Log recent choices for context
-            if profile.life_choices:
-                logger.info("   Recent choices:")
-                for choice in profile.life_choices[-3:]:
-                    logger.info(f"     - {choice}")
+            # Check if we should trigger exchange scenario (master's years only, 50% chance)
+            if self.should_trigger_exchange_scenario(profile):
+                logger.info(f"✈️ TRIGGERING EXCHANGE SCENARIO (Year {profile.year}, master's program)")
+                scenario = self.create_exchange_scenario(profile)
+                debug_logger.complete_scenario_generation(scenario, True, total_time=0.0)
+                return scenario
             
             if not self.llm:
                 logger.warning("🎬 DIRECTOR: LLM not available, using fallback")
@@ -1452,8 +1321,8 @@ class GameDirector:
 
             start_time = time.time()
             
-            # PHASE 1: Load director analysis prompt using pre-processed summaries
-            logger.info("🎬 PHASE 1: Loading director analysis prompt with profile summaries...")
+            # PHASE 1: Load director analysis prompt
+            logger.info("🎬 PHASE 1: Loading director analysis prompt...")
             prompt_content = load_prompt(
                 'director_analysis',
                 student_name=profile.name,
@@ -1471,10 +1340,8 @@ class GameDirector:
                 debug_logger.complete_scenario_generation(fallback_scenario, False, error="Director analysis prompt failed")
                 return fallback_scenario
             
-            logger.info(f"🎬 PHASE 1: Prompt loaded successfully ({len(prompt_content)} chars)")
-            
-            # PHASE 2: Get AI analysis with retry
-            logger.info("🎬 PHASE 2: Getting AI analysis with retry logic...")
+            # PHASE 2: Get AI analysis
+            logger.info("🎬 PHASE 2: Getting AI analysis...")
             messages = [{"role": "user", "content": prompt_content}]
             response = self._make_llm_call_with_retry(
                 messages, 
@@ -1482,14 +1349,11 @@ class GameDirector:
                 prompt_name="director_analysis"
             )
             
-            # Check if LLM call failed after all retries
             if response is None:
                 logger.error("🎬 PHASE 2: AI analysis failed after all retries")
                 fallback_scenario = self._create_ai_crash_fallback(profile)
                 debug_logger.complete_scenario_generation(fallback_scenario, False, error="AI analysis failed after retries")
                 return fallback_scenario
-            
-            logger.info(f"🎬 PHASE 2: AI analysis received ({len(response)} chars)")
             
             # Parse the response
             analysis = self._parse_director_response(response)
@@ -1505,15 +1369,15 @@ class GameDirector:
             
             for i, tool_call in enumerate(analysis.get('tools_to_use', []), 1):
                 logger.info(f"🎬 TOOL {i}/{len(analysis.get('tools_to_use', []))}: {tool_call}")
-                tool_name, params = self._parse_tool_call(tool_call)
-                if tool_name:
-                    tool_results[tool_name] = self._execute_tool(tool_name, profile, **params)
+                tool_name = self._parse_tool_call(tool_call)
+                if tool_name and tool_name in self.tools:
+                    tool_results[tool_name] = self._execute_tool(tool_name, profile)
                 else:
-                    logger.warning(f"   → Could not parse tool call: {tool_call}")
+                    logger.warning(f"   → Tool not found or could not parse: {tool_call}")
             
             logger.info(f"🎬 PHASE 4: Creating scenario with {len(tool_results)} tool results...")
             
-            # PHASE 4: Create the actual scenario with retry
+            # PHASE 4: Create the actual scenario
             scenario = self._create_scenario_with_context_retry(
                 profile, 
                 analysis.get('scenario_type', 'general'),
@@ -1553,20 +1417,145 @@ class GameDirector:
             # Always clear the recursion flag
             self._generating_scenario = False
 
-    def _create_scenario_with_context_retry(self, profile: PlayerProfile, scenario_type: str, analysis: str, tool_results: Dict[str, Any]) -> Dict[str, Any]:
-        """Create the final scenario using AI with context from tools and history awareness WITH RETRY"""
+    def _create_ai_crash_fallback(self, profile: PlayerProfile) -> Dict[str, Any]:
+        """Create a humorous fallback when the AI has completely crashed"""
         
-        logger.info("🎬 PHASE 5: Creating final scenario with AI and retry logic...")
-        logger.info(f"   Scenario type: {scenario_type}")
-        logger.info(f"   Using context from {len(tool_results)} tools")
+        crash_situations = [
+            f"The AI Director has blue-screened while trying to figure out what {profile.name} should do next. In the confusion, three random choices have appeared:",
+            f"ERROR 404: Plot not found. The AI Director is currently stuck in an infinite loop thinking about {profile.name}'s future. Please choose from these emergency backup options:",
+        ]
+        
+        crash_options = [
+            {
+                "id": "choice_1_crash",
+                "description": "Choose Option 1 (The AI doesn't know what this does)",
+                "character_implication": "somehow affects your character in mysterious ways"
+            },
+            {
+                "id": "choice_2_crash", 
+                "description": "Choose Option 2 (This might be related to your studies? Maybe?)",
+                "character_implication": "does something vaguely academic-sounding"
+            },
+            {
+                "id": "choice_3_crash",
+                "description": "Choose Option 3 (The AI is just guessing at this point)",
+                "character_implication": "results in unpredictable character development"
+            }
+        ]
+        
+        situation = random.choice(crash_situations)
+        
+        return {
+            "type": "ai_crash",
+            "title": "🤖 AI DIRECTOR MALFUNCTION 🤖",
+            "situation": situation,
+            "options": crash_options
+        }
+
+    def _make_llm_call_with_retry(self, messages: List[Dict], call_type: str, prompt_name: str, max_retries: int = 3) -> str:
+        """Make LLM call with retry logic"""
+        
+        for attempt in range(max_retries):
+            try:
+                logger.info(f"🤖 LLM CALL ATTEMPT {attempt + 1}/{max_retries} ({call_type})")
+                
+                response = make_llm_call(messages, call_type=call_type, prompt_name=prompt_name)
+                
+                # Basic validation - check if response is not empty and seems reasonable
+                if not response or len(response.strip()) < 10:
+                    raise ValueError(f"LLM response too short or empty: {len(response)} characters")
+                
+                logger.info(f"🤖 LLM CALL SUCCESS on attempt {attempt + 1}")
+                return response
+                
+            except Exception as e:
+                logger.warning(f"🤖 LLM CALL FAILED (attempt {attempt + 1}): {e}")
+                
+                if attempt == max_retries - 1:
+                    logger.error(f"🤖 LLM CALL FAILED after {max_retries} attempts")
+                    break
+                
+                wait_time = 0.5 * (2 ** attempt)
+                logger.info(f"🤖 Waiting {wait_time}s before retry...")
+                time.sleep(wait_time)
+        
+        return None
+
+    def _parse_director_response(self, response: str) -> Dict[str, Any]:
+        """Parse the director's analysis response"""
+        result = {
+            'analysis': '',
+            'tools_to_use': [],
+            'scenario_type': 'general'
+        }
+        
+        # Extract sections using more robust parsing
+        lines = response.split('\n')
+        current_section = None
+        tools_section_lines = []
+        
+        for line in lines:
+            line = line.strip()
+            
+            if line.startswith('ANALYSIS:'):
+                current_section = 'analysis'
+                analysis_text = line.replace('ANALYSIS:', '').strip()
+                if analysis_text:
+                    result['analysis'] = analysis_text
+            elif line.startswith('TOOLS_TO_USE:'):
+                current_section = 'tools'
+                tools_text = line.replace('TOOLS_TO_USE:', '').strip()
+                if tools_text:
+                    tools_section_lines.append(tools_text)
+            elif line.startswith('SCENARIO_TYPE:'):
+                current_section = 'scenario'
+                result['scenario_type'] = line.replace('SCENARIO_TYPE:', '').strip()
+            elif current_section == 'analysis' and line:
+                if result['analysis']:
+                    result['analysis'] += '\n' + line
+                else:
+                    result['analysis'] = line
+            elif current_section == 'tools' and line:
+                tools_section_lines.append(line)
+        
+        # Process tools section
+        for tool_line in tools_section_lines:
+            if ',' in tool_line:
+                for tool in tool_line.split(','):
+                    tool = tool.strip()
+                    if tool:
+                        result['tools_to_use'].append(tool)
+            else:
+                if tool_line.strip():
+                    result['tools_to_use'].append(tool_line.strip())
+        
+        return result
+    
+    def _parse_tool_call(self, tool_call: str) -> str:
+        """Parse a tool call string and return just the tool name"""
+        # Clean up the tool call
+        cleaned_call = tool_call.strip()
+        if cleaned_call.startswith('-'):
+            cleaned_call = cleaned_call[1:].strip()
+        if cleaned_call.startswith('•'):
+            cleaned_call = cleaned_call[1:].strip()
+        
+        # Remove parentheses and parameters - we don't use them anymore
+        if '(' in cleaned_call:
+            tool_name = cleaned_call.split('(')[0].strip()
+        else:
+            tool_name = cleaned_call.strip()
+        
+        return tool_name
+    
+    def _create_scenario_with_context_retry(self, profile: PlayerProfile, scenario_type: str, analysis: str, tool_results: Dict[str, str]) -> Dict[str, Any]:
+        """Create the final scenario using AI with context from tools"""
+        
+        logger.info("🎬 PHASE 5: Creating final scenario with AI...")
         
         context_summary = self._summarize_tool_results(tool_results)
         
-        # Get history context for repetition avoidance
-        history_context = tool_results.get('history_context', {})
-        
         try:
-            # Use simple prompt loading for scenario creation
             prompt_content = load_prompt(
                 'scenario_creation',
                 student_name=profile.name,
@@ -1577,23 +1566,18 @@ class GameDirector:
                 personality_summary=profile.personality_summary or profile.personality_description,
                 analysis=analysis,
                 scenario_type=scenario_type,
-                activities_done=', '.join(history_context.get('activities_already_done', [])),
-                organizations_joined=', '.join(history_context.get('organizations_joined', [])),
-                courses_taken=', '.join(history_context.get('courses_taken', [])),
-                companies_applied=', '.join(history_context.get('companies_applied', [])),
-                repetition_warnings='\n'.join(history_context.get('repetition_warnings', ['No repetition concerns'])),
-                variety_suggestions='\n'.join(history_context.get('variety_suggestions', ['Continue exploring new areas'])),
+                activities_done='',  # You may want to implement this
+                organizations_joined='',  # You may want to implement this
+                courses_taken='',  # You may want to implement this
+                companies_applied='',  # You may want to implement this
+                repetition_warnings='No repetition concerns',
+                variety_suggestions='Continue exploring new areas',
                 context_summary=context_summary
             )
             
-            # ADD DEBUG LOGGING
-            logger.info(f"🎬 PROMPT LOADED: {len(prompt_content)} characters")
             if not prompt_content:
                 logger.error("🎬 ERROR: Prompt content is empty!")
                 return self._create_ai_crash_fallback(profile)
-            
-            # Log first 200 chars of prompt for debugging
-            logger.info(f"🎬 PROMPT PREVIEW: {prompt_content[:200]}...")
             
             # Make LLM call with retry
             messages = [{"role": "user", "content": prompt_content}]
@@ -1603,147 +1587,37 @@ class GameDirector:
                 prompt_name="scenario_creation"
             )
             
-            # Check if LLM call failed after all retries
             if response is None:
                 logger.error("🎬 SCENARIO CREATION: AI failed after all retries")
                 return self._create_ai_crash_fallback(profile)
             
-            # ADD DEBUG LOGGING
-            logger.info(f"🎬 AI RESPONSE: {len(response)} characters")
-            logger.info(f"🎬 RESPONSE PREVIEW: {response[:300]}...")
-            
             # Parse JSON response
             scenario = self._parse_scenario_json(response)
             
-            # ADD DEBUG LOGGING
-            if scenario.get('options'):
-                logger.info(f"🎬 SCENARIO PARSED SUCCESSFULLY: {len(scenario['options'])} options")
-            else:
+            if not scenario.get('options'):
                 logger.error("🎬 ERROR: Scenario parsing failed or no options found")
-                logger.error(f"🎬 PARSED SCENARIO: {scenario}")
                 return self._create_ai_crash_fallback(profile)
-            
-            logger.info("🎬 SCENARIO GENERATED:")
-            logger.info(f"   Title: {scenario.get('title', 'Unknown')}")
-            logger.info(f"   Options: {len(scenario.get('options', []))} choices available")
             
             return scenario
             
         except Exception as e:
             logger.error(f"🎬 Error creating scenario: {e}")
-            logger.error(f"🎬 Exception type: {type(e)}")
-            import traceback
-            logger.error(f"🎬 Full traceback: {traceback.format_exc()}")
             return self._create_ai_crash_fallback(profile)
-
-    def _summarize_tool_results(self, tool_results: Dict[str, Any]) -> str:
+    
+    def _summarize_tool_results(self, tool_results: Dict[str, str]) -> str:
         """Summarize tool results for scenario prompt context"""
+        if not tool_results:
+            return "No tool data available"
+        
         summary_parts = []
-
-        # History context first
-        history = tool_results.get('history_context', {})
-        if history:
-            if history.get('activities_already_done'):
-                summary_parts.append("PREVIOUS ACTIVITIES:")
-                for activity in history['activities_already_done']:
-                    summary_parts.append(f"- {activity}")
-
-            if history.get('variety_suggestions'):
-                summary_parts.append("SUGGESTED NEW AREAS:")
-                for suggestion in history['variety_suggestions']:
-                    summary_parts.append(f"- {suggestion}")
-
-            summary_parts.append("")  # spacing
-
-        # Tool results
         for tool_name, result in tool_results.items():
-            if tool_name == 'history_context' or 'error' in result:
-                continue
-
-            if tool_name == 'get_courses':
-                electives = result.get('electives', [])
-                if electives:
-                    summary_parts.append("AVAILABLE COURSES:")
-                    for course in electives[:5]:
-                        summary_parts.append(f"- {course}")
-
-            elif tool_name == 'get_organizations':
-                summary_parts.append("STUDENT ORGANIZATIONS:")
-                for category, orgs in result.items():
-                    if isinstance(orgs, list):
-                        for org in orgs[:2]:
-                            if isinstance(org, dict):
-                                name = org.get('name', 'Unknown')
-                                desc = org.get('description', '')
-                                summary_parts.append(f"- {name}: {desc}")
-
-            elif tool_name == 'get_companies':
-                summary_parts.append("INTERNSHIPS AND CAREER OPPORTUNITIES:")
-                for industry, companies in result.items():
-                    if isinstance(companies, list):
-                        for company in companies[:2]:
-                            if isinstance(company, dict):
-                                name = company.get('name', 'Unknown')
-                                roles = ', '.join(company.get('opportunities', [])[:2])
-                                summary_parts.append(f"- {name}: {roles}")
-
-            elif tool_name == 'analyze_progress':
-                missing_areas = result.get('missing_areas', [])
-                if missing_areas:
-                    summary_parts.append("UNEXPLORED AREAS:")
-                    for area in missing_areas:
-                        summary_parts.append(f"- {area}")
-
-            elif tool_name == 'get_study_abroad':
-                destinations = result.get('destinations', [])
-                if destinations:
-                    summary_parts.append("STUDY ABROAD OPPORTUNITIES:")
-                    for d in destinations[:3]:
-                        country = d.get('country', 'Unknown')
-                        programs = ', '.join(d.get('programs', [])[:2])
-                        summary_parts.append(f"- {country}: {programs}")
-
-            elif tool_name == 'get_degree_requirements':
-                reqs = result.get('requirements', [])
-                if reqs:
-                    summary_parts.append("DEGREE REQUIREMENTS:")
-                    for r in reqs[:3]:
-                        summary_parts.append(f"- {r}")
-
-            elif tool_name == 'get_campus_facilities':
-                facilities = result.get('facilities', [])
-                if facilities:
-                    summary_parts.append("CAMPUS FACILITIES:")
-                    for f in facilities[:3]:
-                        name = f.get('name', 'Unknown')
-                        desc = f.get('description', '')
-                        summary_parts.append(f"- {name}: {desc}")
-
-            elif tool_name == 'get_university_system':
-                structure = result.get('system_structure', [])
-                if structure:
-                    summary_parts.append("UNIVERSITY SYSTEM INFO:")
-                    for s in structure[:3]:
-                        summary_parts.append(f"- {s}")
-
-            elif tool_name == 'get_academic_calendar':
-                events = result.get('upcoming_events', [])
-                if events:
-                    summary_parts.append("ACADEMIC CALENDAR HIGHLIGHTS:")
-                    for e in events[:3]:
-                        name = e.get('name', 'Unknown')
-                        date = e.get('date', '')
-                        summary_parts.append(f"- {name} on {date}")
-
-            elif tool_name == 'check_prerequisites':
-                unmet = result.get('unmet_prerequisites', [])
-                if unmet:
-                    summary_parts.append("UNMET PREREQUISITES:")
-                    for prereq in unmet[:3]:
-                        summary_parts.append(f"- {prereq}")
-
-        return "\n".join(summary_parts) if summary_parts else "No specific context available"
-
+            summary_parts.append(f"=== {tool_name.upper()} ===")
+            # Include full results - let the LLM handle the full context
+            summary_parts.append(result)
+            summary_parts.append("")
+        
+        return "\n".join(summary_parts)
+    
     def _parse_scenario_json(self, response: str) -> Dict[str, Any]:
         """Parse JSON scenario response with fallback"""
         try:
@@ -1775,98 +1649,9 @@ class GameDirector:
             # Return empty dict to signal failure
             return {}
 
-    def _parse_director_response(self, response: str) -> Dict[str, Any]:
-        """Parse the director's analysis response"""
-        result = {
-            'analysis': '',
-            'tools_to_use': [],
-            'scenario_type': 'general'
-        }
-        
-        logger.info("🎬 PARSING DIRECTOR RESPONSE:")
-        logger.info(f"   Raw response length: {len(response)} characters")
-        
-        # Extract sections using more robust parsing
-        lines = response.split('\n')
-        current_section = None
-        tools_section_lines = []
-        
-        for line in lines:
-            line = line.strip()
-            
-            if line.startswith('ANALYSIS:'):
-                current_section = 'analysis'
-                analysis_text = line.replace('ANALYSIS:', '').strip()
-                if analysis_text:
-                    result['analysis'] = analysis_text
-            elif line.startswith('TOOLS_TO_USE:'):
-                current_section = 'tools'
-                # Check if tools are on the same line
-                tools_text = line.replace('TOOLS_TO_USE:', '').strip()
-                if tools_text:
-                    tools_section_lines.append(tools_text)
-            elif line.startswith('SCENARIO_TYPE:'):
-                current_section = 'scenario'
-                result['scenario_type'] = line.replace('SCENARIO_TYPE:', '').strip()
-            elif current_section == 'analysis' and line:
-                if result['analysis']:
-                    result['analysis'] += '\n' + line
-                else:
-                    result['analysis'] = line
-            elif current_section == 'tools' and line:
-                tools_section_lines.append(line)
-        
-        # Process tools section
-        for tool_line in tools_section_lines:
-            # Handle multiple tools on one line separated by commas
-            if ',' in tool_line:
-                for tool in tool_line.split(','):
-                    tool = tool.strip()
-                    if tool:
-                        result['tools_to_use'].append(tool)
-            else:
-                if tool_line.strip():
-                    result['tools_to_use'].append(tool_line.strip())
-        
-        logger.info(f"   Parsed analysis: {len(result['analysis'])} chars")
-        logger.info(f"   Parsed {len(result['tools_to_use'])} tools: {result['tools_to_use']}")
-        logger.info(f"   Parsed scenario type: {result['scenario_type']}")
-        
-        return result
-    
-    def _parse_tool_call(self, tool_call: str) -> tuple:
-        """Parse a tool call string like 'get_courses()' or 'get_organizations(interest_category=Technology)'"""
-        logger.info(f"   Parsing tool call: {tool_call}")
-        
-        # Clean up the tool call - remove bullet points, dashes, and extra whitespace
-        cleaned_call = tool_call.strip()
-        if cleaned_call.startswith('-'):
-            cleaned_call = cleaned_call[1:].strip()
-        if cleaned_call.startswith('•'):
-            cleaned_call = cleaned_call[1:].strip()
-        
-        if '(' in cleaned_call:
-            tool_name = cleaned_call.split('(')[0].strip()
-            params_str = cleaned_call.split('(')[1].rstrip(')')
-            
-            params = {}
-            if params_str:
-                # Simple parameter parsing - could be more robust
-                for param in params_str.split(','):
-                    if '=' in param:
-                        key, value = param.split('=', 1)
-                        params[key.strip()] = value.strip().strip('"\'')
-            
-            logger.info(f"   → Tool: {tool_name}, Params: {params}")
-            return tool_name, params
-        else:
-            tool_name = cleaned_call.strip()
-            logger.info(f"   → Tool: {tool_name}, No params")
-            return tool_name, {}
-
 # ==================== GLOBAL INSTANCES ====================
 
-director = GameDirector(llm) if llm else None
+director = GameDirector(llm, knowledge) if llm else None
 game_sessions = {}
 
 # ==================== API ROUTES ====================
@@ -2127,6 +1912,46 @@ def get_profile():
         logger.error(f"Error getting profile: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
 
+# ==================== TEST TOOLS ENDPOINT ====================
+
+@app.route('/api/test_tools', methods=['GET'])
+def test_tools():
+    """Test the new tool system"""
+    try:
+        if not director:
+            return jsonify({"success": False, "error": "Director not available"})
+        
+        # Create a test profile
+        test_profile = PlayerProfile()
+        test_profile.name = "Test Student"
+        test_profile.program = "TKDAT"  # Computer Science and Engineering
+        test_profile.year = 2
+        
+        # Test each tool
+        results = {}
+        for tool_name in director.tools.keys():
+            try:
+                result = director._execute_tool(tool_name, test_profile)
+                results[tool_name] = {
+                    "success": True,
+                    "content_length": len(result),
+                    "preview": result[:200] + "..." if len(result) > 200 else result
+                }
+            except Exception as e:
+                results[tool_name] = {
+                    "success": False,
+                    "error": str(e)
+                }
+        
+        return jsonify({
+            "success": True,
+            "available_tools": len(director.tools),
+            "tool_results": results
+        })
+        
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)})
+
 # Debug/Admin endpoints
 @app.route('/api/reload_knowledge', methods=['POST'])
 def reload_knowledge():
@@ -2162,7 +1987,6 @@ def debug_sessions():
         logger.error(f"Error getting debug info: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
 
-
 @app.route('/api/debug/director_tools', methods=['GET'])
 def debug_director_tools():
     """Get info about available director tools"""
@@ -2173,8 +1997,8 @@ def debug_director_tools():
         tools_info = {}
         for tool_name, tool in director.tools.items():
             tools_info[tool_name] = {
-                "name": tool.name,
-                "description": tool.description
+                "name": tool.__class__.__name__,
+                "description": tool.__class__.__doc__ or f"Tool for {tool_name}"
             }
         
         return jsonify({
@@ -2212,7 +2036,6 @@ def debug_status():
     except Exception as e:
         logger.error(f"Error getting debug status: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
-
 
 # ==================== DEBUG ENDPOINTS ====================
 
@@ -2264,6 +2087,7 @@ def debug_page():
             <li><a href="/api/debug/player_profile">/api/debug/player_profile</a></li>
             <li><a href="/api/debug/last_scenario">/api/debug/last_scenario</a></li>
             <li><a href="/api/debug/ai_process">/api/debug/ai_process</a></li>
+            <li><a href="/api/test_tools">/api/test_tools</a></li>
         </ul>
     </div>
 </body>
@@ -2302,7 +2126,7 @@ def debug_player_profile():
             logger.info("🐛 DEBUG: No sessions exist, creating default session")
             game_sessions['default'] = PlayerProfile()
             game_sessions['default'].name = "Debug User"
-            game_sessions['default'].program = "Computer Science and Engineering"
+            game_sessions['default'].program = "TKDAT"  # Use program code
         
         # If the requested session doesn't exist, use the first available one
         if session_id not in game_sessions:
@@ -2403,20 +2227,205 @@ def debug_ai_process():
         logger.error(f"Error getting debug data: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
 
+@app.route('/api/debug/quick_setups', methods=['GET'])
+def debug_quick_setups():
+    """Get predefined quick setups for jumping to different game states"""
+    try:
+        quick_setups = {
+            "early_year_2": {
+                "description": "Early Year 2 Student",
+                "year": 2,
+                "choices": [
+                    "Academic Focus: Joined study groups to improve grades",
+                    "Social Growth: Attended Chalmers welcome events"
+                ]
+            },
+            "mid_year_3": {
+                "description": "Mid Year 3 Student",
+                "year": 3,
+                "choices": [
+                    "Academic Focus: Completed advanced programming courses",
+                    "Social Growth: Joined student section activities",
+                    "Career Prep: Started looking into internship opportunities",
+                    "Technical Skills: Participated in hackathon competition"
+                ]
+            },
+            "year_4_masters": {
+                "description": "Year 4 - Master's Program",
+                "year": 4,
+                "choices": [
+                    "Academic Focus: Excelled in core engineering courses",
+                    "Social Growth: Became active in student organizations",
+                    "Career Prep: Completed summer internship at tech company",
+                    "Technical Skills: Led group project development",
+                    "Masters Selection: Selected advanced master's program",
+                    "Research Focus: Started working with research group"
+                ]
+            },
+            "final_year": {
+                "description": "Final Year Student",
+                "year": 5,
+                "choices": [
+                    "Academic Focus: Maintained high GPA throughout studies",
+                    "Social Growth: Organized events for student section",
+                    "Career Prep: Secured multiple job offers",
+                    "Technical Skills: Completed advanced thesis project",
+                    "Masters Selection: Specialized in chosen field",
+                    "Research Focus: Published research paper",
+                    "Exchange Experience: Completed semester abroad",
+                    "Industry Connection: Networked with industry professionals"
+                ]
+            }
+        }
+        
+        return jsonify({
+            "success": True,
+            "quick_setups": quick_setups
+        })
+    except Exception as e:
+        logger.error(f"Error getting quick setups: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
 
+@app.route('/api/debug/apply_quick_setup', methods=['POST'])
+def debug_apply_quick_setup():
+    """Apply a predefined quick setup to a session"""
+    try:
+        data = request.json
+        session_id = data.get('session_id', 'default')
+        setup_name = data.get('setup_name')
+        
+        if not setup_name:
+            return jsonify({"success": False, "error": "Setup name is required"}), 400
+        
+        # Get the quick setup data
+        quick_setups_response = debug_quick_setups()
+        quick_setups_data = quick_setups_response.get_json()
+        
+        if not quick_setups_data.get('success'):
+            return jsonify({"success": False, "error": "Failed to load quick setups"}), 500
+        
+        setup = quick_setups_data['quick_setups'].get(setup_name)
+        if not setup:
+            return jsonify({"success": False, "error": f"Setup '{setup_name}' not found"}), 404
+        
+        # Apply the setup
+        return debug_jump_to_state_internal(session_id, setup['year'], setup['choices'])
+        
+    except Exception as e:
+        logger.error(f"Error applying quick setup: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/api/debug/jump_to_state', methods=['POST'])
+def debug_jump_to_state():
+    """Jump to a specific game state"""
+    try:
+        data = request.json
+        session_id = data.get('session_id', 'default')
+        year = data.get('year', 1)
+        choices = data.get('choices', [])
+        
+        return debug_jump_to_state_internal(session_id, year, choices)
+        
+    except Exception as e:
+        logger.error(f"Error jumping to state: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+def debug_jump_to_state_internal(session_id, year, choices):
+    """Internal function to jump to a specific game state"""
+    try:
+        # Create or get the session
+        if session_id not in game_sessions:
+            game_sessions[session_id] = PlayerProfile()
+            game_sessions[session_id].name = f"Debug User {session_id}"
+            game_sessions[session_id].program = "TKDAT"  # Default program
+        
+        profile = game_sessions[session_id]
+        
+        # Reset the profile to clean state
+        profile.life_choices = []
+        profile.scenario_types_encountered = set()
+        profile.comprehensive_history = ""
+        profile.personality_summary = ""
+        profile.current_situation = f"starting their studies in year {year}"
+        profile.year = year
+        
+        # Add the choices
+        for i, choice in enumerate(choices):
+            if choice.strip():
+                # Parse choice format "Type: Description"
+                if ':' in choice:
+                    choice_type, description = choice.split(':', 1)
+                    choice_type = choice_type.strip()
+                    description = description.strip()
+                else:
+                    choice_type = "General"
+                    description = choice.strip()
+                
+                # Add choice with fake context
+                choice_context = profile.add_choice(
+                    choice_description=description,
+                    choice_type=choice_type,
+                    choice_data={
+                        'situation': f"During your studies, you decided to focus on {choice_type.lower()}.",
+                        'character_implication': f"This choice helped shape your character through {description.lower()}",
+                        'options': []
+                    }
+                )
+                
+                # Update personality
+                profile.personality_description = f"A student who has focused on {choice_type.lower()} and {description.lower()}"
+        
+        # Force set the year (in case choice count would calculate differently)
+        profile.year = year
+        
+        # Update summaries if LLM is available
+        if llm and choices:
+            try:
+                profile_service = ProfileUpdateService(llm)
+                # Use the last choice for summary update
+                last_choice = choices[-1] if choices else "General: Started studies"
+                if ':' in last_choice:
+                    choice_type, description = last_choice.split(':', 1)
+                else:
+                    choice_type, description = "General", last_choice
+                
+                fake_context = {
+                    'choice_description': description.strip(),
+                    'choice_type': choice_type.strip(),
+                    'situation': f"Jumping to year {year} state",
+                    'character_implication': f"Represents cumulative growth through {len(choices)} choices",
+                    'other_options': []
+                }
+                
+                profile_service.update_profile_summaries(profile, fake_context)
+            except Exception as e:
+                logger.warning(f"Could not update profile summaries: {e}")
+        
+        logger.info(f"🐛 DEBUG: Jumped session {session_id} to year {year} with {len(choices)} choices")
+        
+        return jsonify({
+            "success": True,
+            "message": f"Jumped to Year {year} with {len(choices)} choices",
+            "profile": profile.to_dict(),
+            "session_id": session_id
+        })
+        
+    except Exception as e:
+        logger.error(f"Error in jump_to_state_internal: {e}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        return jsonify({"success": False, "error": str(e)}), 500
 
 # ==================== MAIN ====================
 
 if __name__ == '__main__':
-    logger.info("🚀 Starting Chalmers Life Journey with AI Director...")
+    logger.info("🚀 Starting Chalmers Life Journey with SIMPLIFIED AI Director...")
     logger.info("📁 Validating knowledge files...")
     
-    # Validate knowledge files exist - updated to match your actual files
+    # Validate knowledge files exist - updated for new system
     required_files = [
-        'academic_calendar.json', 'campus_facilities.json', 'chalmers_courses.json',
-        'current_events.json', 'gothenburg_companies.json', 'masters_programs.json',
-        'programs.json', 'student_organizations.json', 'study_abroad_programs.json',
-        'swedish_university_info.json'
+        'sports.txt', 'studies.txt',  # New text files
+        'courses_in_program.json', 'course_summary_simplified.json'  # New JSON files
     ]
     missing_files = []
     existing_files = []
@@ -2436,11 +2445,18 @@ if __name__ == '__main__':
     else:
         logger.info("✅ All knowledge files found")
     
-    logger.info("🎬 AI Director initialized with tools:")
+    # Show registered tools
+    logger.info("🔧 Registered tools:")
+    for tool_name in _tool_registry.keys():
+        logger.info(f"  - {tool_name}")
+    
+    logger.info("🎬 AI Director initialized with simplified tools:")
     if director:
         for tool_name, tool in director.tools.items():
-            logger.info(f"  - {tool_name}: {tool.description[:60]}{'...' if len(tool.description) > 60 else ''}")
+            description = tool.__class__.__doc__ or f"Tool for {tool_name}"
+            logger.info(f"  - {tool_name}: {description.strip()[:60]}{'...' if len(description.strip()) > 60 else ''}")
         logger.info(f"🎬 Total tools available: {len(director.tools)}")
     
     logger.info("🌐 Server starting on http://localhost:5000")
+    logger.info("🧪 Test tools at: http://localhost:5000/api/test_tools")
     app.run(debug=True, host='0.0.0.0', port=5000)

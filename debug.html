@@ -123,28 +123,6 @@
             text-align: center;
         }
         
-        .profile-field {
-            background: #f8f9fa;
-            padding: 15px;
-            border-radius: 4px;
-            border-left: 4px solid #007bff;
-        }
-        
-        .profile-field strong {
-            color: #495057;
-            display: block;
-            margin-bottom: 8px;
-            font-size: 16px;
-        }
-        
-        .profile-value {
-            color: #6c757d;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            font-size: 15px;
-            line-height: 1.4;
-            word-wrap: break-word;
-        }
-        
         .llm-call {
             background: #fff3cd;
             border: 1px solid #ffeaa7;
@@ -485,6 +463,117 @@
             color: #dc3545;
             font-weight: bold;
         }
+
+        /* New styles for Jump functionality */
+        .form-group {
+            margin: 15px 0;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #495057;
+        }
+        
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        
+        .quick-setups {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .quick-setup-card {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 15px;
+            transition: box-shadow 0.3s ease;
+        }
+        
+        .quick-setup-card:hover {
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        
+        .quick-setup-title {
+            font-weight: bold;
+            color: #495057;
+            margin-bottom: 8px;
+            font-size: 16px;
+        }
+        
+        .quick-setup-desc {
+            color: #6c757d;
+            font-size: 13px;
+            margin-bottom: 10px;
+        }
+        
+        .quick-setup-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 500;
+            transition: background-color 0.3s ease;
+        }
+        
+        .quick-setup-btn:hover {
+            background: #1e7e34;
+        }
+        
+        .jump-btn {
+            background: #17a2b8;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: background-color 0.3s ease;
+        }
+        
+        .jump-btn:hover {
+            background: #117a8b;
+        }
+        
+        .result-box {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 6px;
+            padding: 15px;
+            margin-top: 15px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 13px;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .result-box.success {
+            background: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
+        
+        .result-box.error {
+            background: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+        }
     </style>
 </head>
 <body>
@@ -504,15 +593,54 @@
         </div>
         
         <div class="tabs">
-            <button class="tab active" onclick="showTab('profile')">Player Profile</button>
+            <button class="tab active" onclick="showTab('jump')">🚀 Jump to State</button>
+            <button class="tab" onclick="showTab('profile')">Player Profile</button>
             <button class="tab" onclick="showTab('scenario')">Last Scenario</button>
             <button class="tab" onclick="showTab('llm-calls')">LLM Calls</button>
             <button class="tab" onclick="showTab('tools')">Tool Executions</button>
             <button class="tab" onclick="showTab('full-process')">Full Process</button>
         </div>
         
+        <!-- Jump to State Tab -->
+        <div class="tab-content active" id="jump-tab">
+            <div class="debug-panel">
+                <h2>🚀 Jump to Year/Choices</h2>
+                
+                <h3>Quick Setups</h3>
+                <div class="quick-setups" id="quick-setups">
+                    Loading quick setups...
+                </div>
+                
+                <h3>Manual Setup</h3>
+                <div class="form-group">
+                    <label>Session ID:</label>
+                    <input type="text" id="jumpSessionId" value="default" />
+                </div>
+                <div class="form-group">
+                    <label>Target Year:</label>
+                    <select id="jumpYear">
+                        <option value="1">Year 1</option>
+                        <option value="2">Year 2</option>
+                        <option value="3">Year 3</option>
+                        <option value="4" selected>Year 4</option>
+                        <option value="5">Year 5</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Life Choices (one per line):</label>
+                    <textarea id="jumpChoices" rows="10" placeholder="Example:
+Academic Focus: Joined the robotics club for hands-on experience
+Social Growth: Organized study groups in the library
+Technical Skills: Completed advanced programming course
+Career Prep: Applied for summer internship at Volvo"></textarea>
+                </div>
+                <button class="jump-btn" onclick="jumpToState()">🚀 Jump to State</button>
+                <div id="jumpResult"></div>
+            </div>
+        </div>
+        
         <!-- Player Profile Tab -->
-        <div class="tab-content active" id="profile-tab">
+        <div class="tab-content" id="profile-tab">
             <div class="debug-panel">
                 <h2>Player Profile (All Fields)</h2>
                 <div id="profile-display">Loading...</div>
@@ -553,7 +681,7 @@
     </div>
 
     <script>
-        let currentTab = 'profile';
+        let currentTab = 'jump';
         let currentSession = '';
         let availableSessions = [];
         
@@ -574,6 +702,9 @@
             } else {
                 sessionInfo.textContent = 'Using default session';
             }
+            
+            // Update jump session ID to match
+            document.getElementById('jumpSessionId').value = currentSession || 'default';
             
             // Refresh data for the new session
             refreshAllData();
@@ -642,13 +773,118 @@
         
         function refreshAllData() {
             loadSessionsList(); // Load sessions first
+            loadQuickSetups(); // Load quick setups for jump tab
             loadPlayerProfile();
             loadLastScenario();
             loadLLMCalls();
             loadToolExecutions();
             loadFullProcess();
         }
+
+        // NEW JUMP FUNCTIONALITY
+        function loadQuickSetups() {
+            console.log('🐛 Loading quick setups...');
+            fetch('/api/debug/quick_setups')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        displayQuickSetups(data.quick_setups);
+                    } else {
+                        document.getElementById('quick-setups').innerHTML = 
+                            `<div class="error">Error loading quick setups: ${data.error}</div>`;
+                    }
+                })
+                .catch(error => {
+                    console.error('🐛 Quick setups loading error:', error);
+                    document.getElementById('quick-setups').innerHTML = 
+                        `<div class="error">Error: ${error.message}</div>`;
+                });
+        }
         
+        function displayQuickSetups(setups) {
+            const container = document.getElementById('quick-setups');
+            let html = '';
+            
+            Object.entries(setups).forEach(([key, setup]) => {
+                html += `
+                    <div class="quick-setup-card">
+                        <div class="quick-setup-title">${setup.description}</div>
+                        <div class="quick-setup-desc">Year ${setup.year} • ${setup.choices.length} choices</div>
+                        <button class="quick-setup-btn" onclick="applyQuickSetup('${key}')">
+                            Apply Setup
+                        </button>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+        }
+        
+        async function applyQuickSetup(setupName) {
+            const sessionId = document.getElementById('jumpSessionId').value;
+            
+            try {
+                console.log('🐛 Applying quick setup:', setupName);
+                const response = await fetch('/api/debug/apply_quick_setup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        session_id: sessionId,
+                        setup_name: setupName
+                    })
+                });
+                
+                const result = await response.json();
+                document.getElementById('jumpResult').innerHTML = 
+                    `<div class="result-box ${result.success ? 'success' : 'error'}">${JSON.stringify(result, null, 2)}</div>`;
+                    
+                if (result.success) {
+                    console.log('🐛 Quick setup applied successfully');
+                    // Refresh other tabs if needed
+                    refreshAllData();
+                }
+            } catch (error) {
+                console.error('🐛 Quick setup error:', error);
+                document.getElementById('jumpResult').innerHTML = 
+                    `<div class="result-box error">Error: ${error.message}</div>`;
+            }
+        }
+        
+        async function jumpToState() {
+            const sessionId = document.getElementById('jumpSessionId').value;
+            const year = parseInt(document.getElementById('jumpYear').value);
+            const choicesText = document.getElementById('jumpChoices').value;
+            const choices = choicesText.split('\n').filter(c => c.trim());
+            
+            try {
+                console.log('🐛 Jumping to state:', { sessionId, year, choices: choices.length });
+                const response = await fetch('/api/debug/jump_to_state', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        session_id: sessionId,
+                        year: year,
+                        choices: choices
+                    })
+                });
+                
+                const result = await response.json();
+                document.getElementById('jumpResult').innerHTML = 
+                    `<div class="result-box ${result.success ? 'success' : 'error'}">${JSON.stringify(result, null, 2)}</div>`;
+                    
+                if (result.success) {
+                    console.log('🐛 Jump to state successful');
+                    // Refresh other tabs if needed
+                    refreshAllData();
+                }
+            } catch (error) {
+                console.error('🐛 Jump to state error:', error);
+                document.getElementById('jumpResult').innerHTML = 
+                    `<div class="result-box error">Error: ${error.message}</div>`;
+            }
+        }
+        
+        // EXISTING FUNCTIONALITY (keeping all your original functions)
         function loadPlayerProfile() {
             console.log('🐛 Loading player profile...');
             const url = currentSession ? `/api/debug/player_profile?session_id=${currentSession}` : '/api/debug/player_profile';

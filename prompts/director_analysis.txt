@@ -10,7 +10,7 @@ PROGRAM EXPLANATION:
 STUDENT'S JOURNEY SO FAR:
 {comprehensive_history}
 
-PERSONALITY SHOWN THIS FAR:
+PERSONALITY SHOWN SO FAR:
 {personality_summary}
 
 AVAILABLE TOOLS:
@@ -29,11 +29,17 @@ ANALYSIS:
 [Your analysis of what should happen next based on their journey, personality, and current situation]
 
 TOOLS_TO_USE:
-get_courses()
-get_organizations(interest_category=Social)
-get_companies()
+sports
+studies
+courses
+student_activities
 
 SCENARIO_TYPE:
 [The type of scenario you want to create - be creative and specific]
 
-IMPORTANT: Focus on natural progression and character development based on their established journey and personality.
+IMPORTANT: 
+- Tools no longer take parameters - just list the tool names you want to use
+- Available tools are: sports, studies, courses, student_activities
+- Focus on natural progression and character development based on their established journey and personality
+- Each tool will automatically provide relevant information for the student's program and year
+- The student_activities tool includes both general activities and program-specific student section information
