@@ -605,6 +605,40 @@
             font-style: italic;
         }
 
+        /* Masters introduction text styling */
+        .masters-introduction-text {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 12px;
+            padding: 20px;
+            margin: 15px 0 20px 0;
+            font-size: 1rem;
+            line-height: 1.7;
+            color: #495057;
+            border: 1px solid rgba(102, 126, 234, 0.2);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .masters-introduction-text.loading {
+            background: linear-gradient(90deg, #f8f9fa, #e9ecef, #f8f9fa);
+            background-size: 200% 100%;
+            animation: shimmer 2s infinite;
+            color: #6c757d;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100px;
+        }
+
+        .masters-introduction-text p {
+            margin-bottom: 15px;
+            line-height: 1.6;
+        }
+
+        .masters-introduction-text p:last-child {
+            margin-bottom: 0;
+        }
+
         .profile-card {
             background: rgba(255, 255, 255, 0.95);
             border-radius: 20px;
@@ -634,6 +668,7 @@
             border-radius: 15px;
             padding: 20px;
             border: 1px solid #e9ecef;
+            margin-bottom: 20px;
         }
 
         .profile-item {
@@ -653,6 +688,64 @@
             text-align: right;
             flex: 1;
             margin-left: 10px;
+        }
+
+        /* NEW: Journey History Section */
+        .journey-section {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 20px;
+            border: 1px solid #e9ecef;
+            margin-bottom: 20px;
+        }
+
+        .journey-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .journey-header h4 {
+            color: #4a5568;
+            font-size: 1.1rem;
+            margin-left: 10px;
+            margin: 0;
+        }
+
+        .journey-content {
+            color: #495057;
+            line-height: 1.6;
+            font-size: 0.95rem;
+            max-height: 200px;
+            overflow-y: auto;
+            padding-right: 5px;
+        }
+
+        .journey-content::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .journey-content::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 2px;
+        }
+
+        .journey-content::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 2px;
+        }
+
+        .journey-content::-webkit-scrollbar-thumb:hover {
+            background: #a1a1a1;
+        }
+
+        .journey-content.empty {
+            color: #6c757d;
+            font-style: italic;
+            text-align: center;
+            padding: 20px;
         }
 
         .progress-bar {
@@ -677,7 +770,7 @@
             font-size: 0.9rem;
             color: #6c757d;
             margin-top: 5px;
-            display: none; /* Hidden as requested */
+            display: none;
         }
 
         .status {
@@ -780,7 +873,7 @@
             transform: none;
         }
 
-        /* NEW: Introduction section styling */
+        /* Introduction section styling */
         .introduction-section {
             text-align: center;
             padding: 40px 20px;
@@ -990,6 +1083,7 @@
             z-index: 1000;
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.2);
+            display: none; /* Hide debug link */
         }
 
         .debug-link:hover {
@@ -998,11 +1092,13 @@
             box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
             text-decoration: none;
             color: white;
+            display: none; /* Hide debug link hover */
         }
 
         .debug-link::before {
             content: '🔧';
             margin-right: 8px;
+            display: none; /* Hide debug link icon */
         }
     </style>
 </head>
@@ -1055,6 +1151,18 @@
                         <span class="profile-value" id="choiceCount">0</span>
                     </div>
                 </div>
+
+                <!-- NEW: Journey History Section -->
+                <div class="journey-section" id="journeySection">
+                    <div class="journey-header">
+                        <span style="font-size: 1.1rem;">📚</span>
+                        <h4>The Journey This Far</h4>
+                    </div>
+                    <div class="journey-content empty" id="journeyContent">
+                        Your story begins here. Each choice you make will add to your unique journey through Chalmers University.
+                    </div>
+                </div>
+
                 <div class="progress-bar">
                     <div class="progress-fill" id="progressFill" style="width: 0%"></div>
                 </div>
@@ -1104,29 +1212,30 @@
     <script>
         // Game state
         let gameState = {
-            stage: 'name_input', // name_input -> introduction -> program_input -> life_choice
+            stage: 'name_input',
             sessionId: 'session_' + Date.now(),
             player: {
                 name: '',
                 program: '',
-                programCode: '', // New field to store program code
+                programCode: '',
                 year: 1,
                 selected_masters_program: '',
                 personality: 'is just starting their university journey',
                 life_choices: [],
                 current_situation: 'beginning their studies',
                 has_seen_introduction: false,
-                introduction_text: ''
+                introduction_text: '',
+                comprehensive_history: ''  // NEW: Track comprehensive history
             },
             currentChoice: null,
             isGenerating: false,
-            choiceHistory: [] // Track all choices for display
+            choiceHistory: []
         };
 
         // Enhanced Program Selection State
         let programSelectionState = {
             selectedProgram: null,
-            selectedProgramCode: null, // New field for selected program code
+            selectedProgramCode: null,
             filteredPrograms: [],
             isOpen: false
         };
@@ -1139,112 +1248,112 @@
             {
                 "code": "TKATK",
                 "name": "Architecture and Engineering",
-                "explanation": "A unique program that combines design with natural sciences and engineering, preparing you for a future where working methods and digital design tools are increasingly boundary-crossing. You'll work with the design of large-span structures like bridges and arenas, climate-smart buildings, or concert halls with high acoustic requirements, as well as the development of future material properties and expressions. The program addresses both technical/scientific and aesthetic/humanistic foundations while training an investigative, creative, and reflective approach.",
+                "explanation": "A unique program that combines design with natural sciences and engineering, preparing you for a future where working methods and digital design tools are increasingly boundary-crossing. You'll work with the design of large-span structures like bridges and arenas, climate-smart buildings, or concert halls with high acoustic requirements, as well as the development of future material properties and expressions.",
                 "keywords": ["design", "architecture", "engineering", "structures", "sustainability"],
                 "url": "arkitektur-och-teknik-arkitektcivilingenjor"
             },
             {
                 "code": "TKAUT",
                 "name": "Automation and Mechatronics",
-                "explanation": "Advanced sensors and artificial intelligence are rapidly influencing the development of new technical products. In this program, you'll gain the tools to lead future technology in a smarter, cheaper, and more environmentally friendly direction. You'll get a broad introduction to engineering with elements of information technology, computer technology, artificial intelligence, as well as mechanics and electronics. The program is designed to increase your understanding of how mechanics, electronics, computers, and software work together.",
+                "explanation": "Advanced sensors and artificial intelligence are rapidly influencing the development of new technical products. In this program, you'll gain the tools to lead future technology in a smarter, cheaper, and more environmentally friendly direction. You'll get a broad introduction to engineering with elements of information technology, computer technology, artificial intelligence, as well as mechanics and electronics.",
                 "keywords": ["automation", "AI", "robotics", "sensors", "mechatronics"],
                 "url": "automation-och-mekatronik-civilingenjor"
             },
             {
                 "code": "TKBIO",
                 "name": "Biotechnology",
-                "explanation": "In biotechnology, studies of living organisms and their biological and chemical processes are combined to develop life-improving products for humans, animals, and nature. This can involve creating breakthrough medicines, developing renewable fuels, producing future food, or making the biotechnology industry more sustainable. You'll learn how cells and advanced organisms function and how to manipulate them to create solutions and products that make a difference.",
+                "explanation": "In biotechnology, studies of living organisms and their biological and chemical processes are combined to develop life-improving products for humans, animals, and nature. This can involve creating breakthrough medicines, developing renewable fuels, producing future food, or making the biotechnology industry more sustainable.",
                 "keywords": ["biotechnology", "medicine", "sustainability", "biology", "chemistry"],
                 "url": "bioteknik-civilingenjor"
             },
             {
                 "code": "TKDAT",
                 "name": "Computer Science and Engineering",
-                "explanation": "Computer technology is woven into almost everything, and it's hard to imagine life without computer-based products and services. Digital communication platforms, smart mobile phones, and small digital systems for monitoring and control are just a few examples of what is now considered natural parts of our society. With competence in computer science, you become the spider in the web that holds complicated projects together, contributing systems thinking since you understand the system from what the underlying hardware can do to how the application should look and the glue in between.",
+                "explanation": "Computer technology is woven into almost everything, and it's hard to imagine life without computer-based products and services. Digital communication platforms, smart mobile phones, and small digital systems for monitoring and control are just a few examples of what is now considered natural parts of our society.",
                 "keywords": ["computer science", "programming", "software", "systems", "technology"],
                 "url": "datateknik-civilingenjor"
             },
             {
                 "code": "TKELT",
                 "name": "Electrical Engineering",
-                "explanation": "As a civil engineer in electrical engineering, you create smart solutions to today's and tomorrow's challenges in energy supply, environmentally friendly and safe vehicles, smart cities, data communication, and much more. You're also involved in driving development towards a sustainable society and working to make everyday life easier for people worldwide. With knowledge of electricity and magnetism, you get the competence required to develop small and large systems, from kilometer-long power grids to mobile phone micrometer-sized components.",
+                "explanation": "As a civil engineer in electrical engineering, you create smart solutions to today's and tomorrow's challenges in energy supply, environmentally friendly and safe vehicles, smart cities, data communication, and much more. You're also involved in driving development towards a sustainable society and working to make everyday life easier for people worldwide.",
                 "keywords": ["electrical", "energy", "smart cities", "sustainability", "power"],
                 "url": "elektroteknik-civilingenjor"
             },
             {
                 "code": "TKGBS",
                 "name": "Global Systems",
-                "explanation": "Humanity today faces a number of major challenges whose solutions will require comprehensive changes in both technology and society. This program prepares you to understand and handle the challenges we face at local and global levels. You'll learn to think systematically about these challenges and how they interact with society, technology, and nature. The program provides a foundation in mathematics, physics, and computer science with extensive elements of mathematical thinking, systems thinking, modeling, and problem-solving.",
+                "explanation": "Humanity today faces a number of major challenges whose solutions will require comprehensive changes in both technology and society. This program prepares you to understand and handle the challenges we face at local and global levels. You'll learn to think systematically about these challenges and how they interact with society, technology, and nature.",
                 "keywords": ["systems thinking", "sustainability", "global challenges", "mathematics", "physics"],
                 "url": "globala-system-civilingenjor"
             },
             {
                 "code": "TKIEK",
                 "name": "Industrial Engineering and Management",
-                "explanation": "Combine technology and economics in an education where you learn to develop both existing and new businesses. Your knowledge will make you sought after by industry and organizations as a project manager, business developer, or manager. In Industrial Engineering and Management, you initially gain basic knowledge of technology and technology-based business operations, then choose a more in-depth profile in the education. You'll get a solid technical foundation and understanding of organizational and economic issues through practical case studies.",
+                "explanation": "Combine technology and economics in an education where you learn to develop both existing and new businesses. Your knowledge will make you sought after by industry and organizations as a project manager, business developer, or manager. You'll get a solid technical foundation and understanding of organizational and economic issues through practical case studies.",
                 "keywords": ["business", "management", "economics", "project management", "technology"],
                 "url": "industriell-ekonomi-civilingenjor"
             },
             {
                 "code": "TKITE",
                 "name": "Information Technology",
-                "explanation": "Are you the next game developer, interaction designer, or system architect? With a civil engineering degree in information technology, you work with developing future software systems. In all sectors of society, technical problem solvers with a sense of user needs are needed. The education is for you who want to be part of an exciting and attractive industry with many opportunities. You'll primarily study software development and mathematics during the first three years, which forms the foundation of your engineering degree.",
+                "explanation": "Are you the next game developer, interaction designer, or system architect? With a civil engineering degree in information technology, you work with developing future software systems. In all sectors of society, technical problem solvers with a sense of user needs are needed. You'll primarily study software development and mathematics during the first three years.",
                 "keywords": ["IT", "software development", "game development", "systems", "user experience"],
                 "url": "informationsteknik-civilingenjor"
             },
             {
                 "code": "TKMAS",
                 "name": "Mechanical Engineering",
-                "explanation": "Do you want to design and build everything from small components to large systems? With mechanical engineering, you can develop self-driving vehicles, life-saving robots, or find new ways to recycle everything from electronics to old products. As a mechanical engineer, you contribute practical solutions that make society more sustainable. This flexible program allows you to choose either a shorter university engineer track (3 years) or a longer civil engineer track (5 years).",
+                "explanation": "Do you want to design and build everything from small components to large systems? With mechanical engineering, you can develop self-driving vehicles, life-saving robots, or find new ways to recycle everything from electronics to old products. As a mechanical engineer, you contribute practical solutions that make society more sustainable.",
                 "keywords": ["mechanical", "robotics", "vehicles", "sustainability", "design"],
                 "url": "maskinteknik-hogskoleingenjorcivilingenjor"
             },
             {
                 "code": "TKMED",
                 "name": "Biomedical Engineering",
-                "explanation": "Through biomedical engineering, you can save lives and improve future health with advanced technology and artificial intelligence. Healthcare faces major challenges with an aging population, and your innovation will contribute to solutions in a globally growing future industry. The education is unique through close collaboration with Sahlgrenska Academy and Sahlgrenska University Hospital. You'll learn how to prevent, diagnose, monitor, and treat various diseases more easily using medical technology.",
+                "explanation": "Through biomedical engineering, you can save lives and improve future health with advanced technology and artificial intelligence. Healthcare faces major challenges with an aging population, and your innovation will contribute to solutions in a globally growing future industry. You'll learn how to prevent, diagnose, monitor, and treat various diseases more easily using medical technology.",
                 "keywords": ["biomedical", "healthcare", "AI", "medical technology", "diagnostics"],
                 "url": "medicinsk-teknik-civilingenjor"
             },
             {
                 "code": "TKSAM",
                 "name": "Civil and Environmental Engineering",
-                "explanation": "Digitalization, sustainable development, electrification, and climate change are some of the complex challenges that society faces. As a civil engineer in civil and environmental engineering, you help shape future cities and society. You'll be confronted with today's and tomorrow's technical challenges to handle nature's resources, our society, and how we humans live and move in these environments. The education is characterized by a holistic view where all parts of building and managing a society are included.",
+                "explanation": "Digitalization, sustainable development, electrification, and climate change are some of the complex challenges that society faces. As a civil engineer in civil and environmental engineering, you help shape future cities and society. You'll be confronted with today's and tomorrow's technical challenges to handle nature's resources, our society, and how we humans live and move in these environments.",
                 "keywords": ["civil engineering", "sustainability", "urban planning", "environment", "infrastructure"],
                 "url": "samhallsbyggnadsteknik-civilingenjor"
             },
             {
                 "code": "TKDES",
                 "name": "Engineering Design",
-                "explanation": "By putting the user in focus, you learn to develop products and innovations that make a real difference in people's daily lives. Here you get to take your ideas from sketch to reality in a creative design process. You get a holistic perspective on product development and learn to explore different combinations of form, material, and technology to create user-friendly and sustainable products that can actually change the world around you. This flexible program allows you to choose either a shorter university engineer track (3 years) or a longer civil engineer track (5 years).",
+                "explanation": "By putting the user in focus, you learn to develop products and innovations that make a real difference in people's daily lives. Here you get to take your ideas from sketch to reality in a creative design process. You get a holistic perspective on product development and learn to explore different combinations of form, material, and technology to create user-friendly and sustainable products.",
                 "keywords": ["design", "innovation", "user experience", "product development", "sustainability"],
                 "url": "teknisk-design-hogskoleingenjorcivilingenjor"
             },
             {
                 "code": "TKTFY",
                 "name": "Engineering Physics",
-                "explanation": "As a civil engineer in engineering physics, you learn to solve complex problems. This, combined with a strong theoretical foundation in physics, mathematics, and technology, will make you sought after in the job market. Virtually all major technology companies have technical physicists on their staff, usually in leading positions in research or development departments. The education's breadth makes room for technical physicists in most companies and organizations.",
+                "explanation": "As a civil engineer in engineering physics, you learn to solve complex problems. This, combined with a strong theoretical foundation in physics, mathematics, and technology, will make you sought after in the job market. Virtually all major technology companies have technical physicists on their staff, usually in leading positions in research or development departments.",
                 "keywords": ["physics", "mathematics", "research", "technology", "problem solving"],
                 "url": "teknisk-fysik-civilingenjor"
             },
             {
                 "code": "TKKMT",
                 "name": "Chemical Engineering",
-                "explanation": "Do you want to be part of creating the future? Chemical engineering is the education for you who want to combine molecular knowledge with technical problem-solving to meet society's major challenges. Here you get the tools to develop the next generation of medicines, new advanced materials, and innovative energy solutions. As a civil engineer in chemical engineering, you play an important role in shaping tomorrow's sustainable society and driving the circular transition.",
+                "explanation": "Do you want to be part of creating the future? Chemical engineering is the education for you who want to combine molecular knowledge with technical problem-solving to meet society's major challenges. Here you get the tools to develop the next generation of medicines, new advanced materials, and innovative energy solutions.",
                 "keywords": ["chemistry", "materials", "energy", "sustainability", "innovation"],
                 "url": "kemiteknik-civilingenjor"
             },
             {
                 "code": "TKTEM",
                 "name": "Engineering Mathematics",
-                "explanation": "You who choose Engineering Mathematics think mathematics is fun and appreciate the subject's usefulness and theoretical weight. During the education, you train in problem-solving and learn to use powerful mathematical tools, giving you great opportunities for exciting jobs in many different industries. Mathematics plays a decisive role in all technical professional areas. The education's breadth prepares you to work with computational and computer science, AI and statistics, but also in industries such as the pharmaceutical industry, chemical industry, transport sector, urban planning, and communication and security.",
+                "explanation": "You who choose Engineering Mathematics think mathematics is fun and appreciate the subject's usefulness and theoretical weight. During the education, you train in problem-solving and learn to use powerful mathematical tools, giving you great opportunities for exciting jobs in many different industries. Mathematics plays a decisive role in all technical professional areas.",
                 "keywords": ["mathematics", "AI", "statistics", "computational", "problem solving"],
                 "url": "teknisk-matematik-civilingenjor"
             },
             {
                 "code": "TKARK",
                 "name": "Architecture",
-                "explanation": "Are you interested in how people live, how a good workplace can be shaped, and how our cities are built so that they are fair, attractive, and sustainable? This education is for you who want to work in teams and project form, and who want to develop your ability to design the built environment to contribute to sustainable development. You'll work with the design of buildings, streets, parks, and city districts, combining technical and artistic knowledge to achieve functionality and aesthetic solutions while following sustainable development as a common thread throughout your studies.",
+                "explanation": "Are you interested in how people live, how a good workplace can be shaped, and how our cities are built so that they are fair, attractive, and sustainable? You'll work with the design of buildings, streets, parks, and city districts, combining technical and artistic knowledge to achieve functionality and aesthetic solutions while following sustainable development as a common thread throughout your studies.",
                 "keywords": ["architecture", "urban planning", "sustainability", "design", "buildings"],
                 "url": "arkitektur-arkitekt"
             }
@@ -1252,6 +1361,11 @@
 
         // Initialize filtered programs
         programSelectionState.filteredPrograms = [...programsData];
+
+        // DOM elements
+        const storyContent = document.getElementById('storyContent');
+        const nameInput = document.getElementById('nameInput');
+        const status = document.getElementById('status');
 
         // API Helper Functions
         async function apiCall(endpoint, method = 'GET', data = null) {
@@ -1282,10 +1396,344 @@
             }
         }
 
-        // DOM elements
-        const storyContent = document.getElementById('storyContent');
-        const nameInput = document.getElementById('nameInput');
-        const status = document.getElementById('status');
+        // Updated displayChoice function to handle master's selection properly
+        function displayChoice(choice) {
+            gameState.currentChoice = choice;
+            
+            // Special handling for master's selection - show as regular choice with introduction text
+            if (choice.type === 'masters_selection') {
+                displayMastersSelectionAsChoice(choice);
+                return;
+            }
+            
+            // Regular choice display (existing code remains the same)
+            const choiceContainer = document.createElement('div');
+            choiceContainer.className = 'choice-container current fade-in';
+            choiceContainer.id = `choice-${gameState.choiceHistory.length}`;
+            
+            // Create choice header
+            const choiceHeader = document.createElement('div');
+            choiceHeader.className = 'choice-header';
+            
+            const choiceTitle = document.createElement('div');
+            choiceTitle.className = 'choice-title';
+            
+            const badge = document.createElement('span');
+            badge.className = 'choice-badge';
+            badge.textContent = `Choice ${gameState.choiceHistory.length + 1}`;
+            
+            choiceTitle.innerHTML = `${choice.title}`;
+            choiceTitle.prepend(badge);
+            
+            choiceHeader.appendChild(choiceTitle);
+            
+            // Create choice content
+            const choiceContent = document.createElement('div');
+            choiceContent.className = 'choice-content';
+            
+            // Add situation text
+            const situationDiv = document.createElement('div');
+            situationDiv.className = 'choice-situation';
+            situationDiv.textContent = choice.situation;
+            choiceContent.appendChild(situationDiv);
+            
+            // Create options container
+            const optionsContainer = document.createElement('div');
+            choice.options.forEach((option, index) => {
+                const optionDiv = document.createElement('div');
+                optionDiv.className = 'choice-option';
+                optionDiv.onclick = () => makeChoice(index);
+                optionDiv.innerHTML = `
+                    <span class="choice-number">${index + 1}</span>
+                    <div class="choice-text">
+                        ${option.description}
+                        <div class="choice-implication">→ ${option.character_implication}</div>
+                    </div>
+                `;
+                optionsContainer.appendChild(optionDiv);
+            });
+            
+            choiceContent.appendChild(optionsContainer);
+            
+            choiceContainer.appendChild(choiceHeader);
+            choiceContainer.appendChild(choiceContent);
+            
+            // Add to story content at the top
+            if (storyContent.children.length > 0) {
+                storyContent.insertBefore(choiceContainer, storyContent.firstChild);
+            } else {
+                storyContent.appendChild(choiceContainer);
+            }
+            
+            storyContent.scrollTop = 0;
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // NEW: Display master's selection as a regular choice with introduction text
+        function displayMastersSelectionAsChoice(choice) {
+            console.log('🎓 Displaying master\'s selection as choice-style container');
+            
+            // Create choice container with special masters styling
+            const choiceContainer = document.createElement('div');
+            choiceContainer.className = 'choice-container current masters-selection fade-in';
+            choiceContainer.id = `choice-${gameState.choiceHistory.length}`;
+            
+            // Create choice header
+            const choiceHeader = document.createElement('div');
+            choiceHeader.className = 'choice-header masters-selection';
+            
+            const choiceTitle = document.createElement('div');
+            choiceTitle.className = 'choice-title';
+            
+            const badge = document.createElement('span');
+            badge.className = 'choice-badge masters';
+            badge.textContent = `🎓 Master's Selection`;
+            
+            choiceTitle.innerHTML = `${choice.title}`;
+            choiceTitle.prepend(badge);
+            
+            choiceHeader.appendChild(choiceTitle);
+            
+            // Create choice content
+            const choiceContent = document.createElement('div');
+            choiceContent.className = 'choice-content';
+            
+            // Add situation text
+            const situationDiv = document.createElement('div');
+            situationDiv.className = 'choice-situation';
+            situationDiv.textContent = choice.situation;
+            choiceContent.appendChild(situationDiv);
+            
+            // Add introduction text container (will be populated by AI)
+            const introContainer = document.createElement('div');
+            introContainer.className = 'masters-introduction-text loading';
+            introContainer.id = 'mastersIntroInChoice';
+            introContainer.innerHTML = '<span>AI is crafting your personalized master\'s program guidance...</span>';
+            choiceContent.appendChild(introContainer);
+            
+            // Add continue button
+            const continueButton = document.createElement('button');
+            continueButton.className = 'introduction-continue-btn';
+            continueButton.id = 'mastersChoiceBtn';
+            continueButton.onclick = showMastersSelectionModal;
+            continueButton.style.display = 'none';
+            continueButton.innerHTML = 'Choose Your Master\'s Program 🎓';
+            choiceContent.appendChild(continueButton);
+            
+            choiceContainer.appendChild(choiceHeader);
+            choiceContainer.appendChild(choiceContent);
+            
+            // Add to story content at the top
+            if (storyContent.children.length > 0) {
+                storyContent.insertBefore(choiceContainer, storyContent.firstChild);
+            } else {
+                storyContent.appendChild(choiceContainer);
+            }
+            
+            storyContent.scrollTop = 0;
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            
+            // Generate master's introduction via API
+            generateMastersIntroduction(choice);
+        }
+
+        // NEW: Generate master's introduction text and display in choice container
+        async function generateMastersIntroduction(choice) {
+            try {
+                // Call the backend to generate master's introduction text
+                const result = await apiCall('/generate_masters_introduction', 'POST', {
+                    session_id: gameState.sessionId,
+                    choice_data: choice
+                });
+                
+                // Display the introduction in the choice container
+                displayMastersIntroductionInChoice(result.introduction);
+                
+                showStatus('Read about your master\'s decision, then choose your program', 'ready');
+                
+            } catch (error) {
+                console.log('API call failed, using fallback introduction');
+                
+                // Fallback introduction if API fails
+                const fallbackIntro = `You stand at a crossroads, ${gameState.player.name}. 
+
+Your bachelor's degree in ${gameState.player.program} has equipped you with a strong foundation, but now it's time to specialize. The master's program you choose will define your expertise, shape your career trajectory, and determine where you'll make your greatest impact.
+
+Over the past years, you've grown from an eager first-year student into someone with clear interests and developed skills. The experiences you've had, the challenges you've overcome, and the knowledge you've gained have all led to this moment.
+
+This isn't just about choosing courses – it's about choosing your future. Each master's program opens different doors, connects you with different networks, and prepares you for different challenges. Some will deepen your technical expertise, others will broaden your perspective, and some will prepare you for leadership roles.
+
+Take your time. Consider your passions, your strengths, and your vision for the future. The choice you make here will shape the final chapter of your university journey and the first chapter of your professional career.`;
+                
+                displayMastersIntroductionInChoice(fallbackIntro);
+                showStatus('Read about your master\'s decision, then choose your program', 'ready');
+            }
+        }
+
+        // NEW: Display master's introduction text in the choice container
+        function displayMastersIntroductionInChoice(text) {
+            const introElement = document.getElementById('mastersIntroInChoice');
+            const continueBtn = document.getElementById('mastersChoiceBtn');
+            
+            if (!introElement || !continueBtn) {
+                console.error('Master\'s introduction elements not found');
+                return;
+            }
+            
+            // Remove loading styles
+            introElement.classList.remove('loading');
+            introElement.innerHTML = '';
+            
+            // Split text into paragraphs and add them
+            const paragraphs = text.split('\n\n');
+            paragraphs.forEach((paragraph, index) => {
+                if (paragraph.trim()) {
+                    const p = document.createElement('p');
+                    p.textContent = paragraph.trim();
+                    p.style.marginBottom = '15px';
+                    p.style.lineHeight = '1.6';
+                    introElement.appendChild(p);
+                }
+            });
+            
+            // Show continue button after a delay
+            setTimeout(() => {
+                continueBtn.style.display = 'block';
+                continueBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 1000);
+        }
+
+        // Updated showMastersSelectionModal function with cleaned program names
+        function showMastersSelectionModal() {
+            console.log('🎓 Opening master\'s selection modal after reading introduction');
+            
+            // Now open the modal with the master's programs
+            displayMastersSelectionModal(gameState.currentChoice);
+        }
+
+        // Updated displayMastersSelectionModal function with name cleaning
+        function displayMastersSelectionModal(choice) {
+            console.log('🎓 Opening master\'s selection modal');
+            
+            // Store the choice for later use
+            gameState.currentChoice = choice;
+            
+            // Update modal content for master's selection
+            const modal = document.getElementById('programSelectionModal');
+            const modalHeader = modal.querySelector('.modal-header h2');
+            const modalCloseBtn = modal.querySelector('.modal-close');
+            const selectionDescription = document.getElementById('selectionDescription');
+            
+            // Update header and description for master's selection
+            modalHeader.innerHTML = '🎓 Choose Your Master\'s Program';
+            selectionDescription.textContent = `${gameState.player.name}, choose your master's specialization! This decision will shape your final years at Chalmers and determine your expertise area. Each master's program offers unique opportunities and career paths.`;
+            
+            // Hide the close button for master's selection (mandatory choice)
+            modalCloseBtn.style.display = 'none';
+            
+            // Set up master's selection state
+            programSelectionState.selectedProgram = null;
+            programSelectionState.selectedProgramCode = null;
+            programSelectionState.isOpen = true;
+            
+            // Convert choice options to program-like format WITH ENHANCED EXPLANATIONS
+            const masterPrograms = choice.options.map((option, index) => {
+                const cleanedName = cleanMasterProgramName(option.description);
+                const programCode = option.program_code || extractMasterProgramCode(option.description);
+                
+                return {
+                    code: programCode || `MASTER_${index + 1}`,
+                    name: cleanedName,
+                    explanation: option.character_implication || option.full_explanation || `This specialization will shape your expertise and career path.`,
+                    full_explanation: option.full_explanation || option.character_implication,
+                    character_implication: option.character_implication,
+                    keywords: option.keywords || ["master's", "specialization", "advanced"],
+                    url: "#",
+                    originalDescription: option.description // Keep original for backend communication
+                };
+            });
+            
+            // Update filtered programs for master's selection
+            programSelectionState.filteredPrograms = masterPrograms;
+            
+            // Show modal
+            modal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+            
+            // Update confirm button text
+            const confirmBtn = document.getElementById('confirmSelectionBtn');
+            confirmBtn.innerHTML = `
+                <span>Continue with Selected Master's Program</span>
+                <span>🎓</span>
+            `;
+            
+            // Render the master's programs grid
+            renderMastersProgramsGrid();
+            setupMastersProgramSearch();
+            updateSelectedProgramInfo();
+            
+            // Focus on search input
+            setTimeout(() => {
+                document.getElementById('programSearchInput').focus();
+            }, 300);
+            
+            showStatus('Choose your master\'s specialization to continue', 'ready');
+        }
+        // NEW: Clean master's program names to look like regular program names
+        function cleanMasterProgramName(masterName) {
+            let cleaned = masterName;
+            
+            // Remove MSC PROGR, MSC PROGRAMME, etc.
+            cleaned = cleaned.replace(/,?\s*(MSC|M\.?SC\.?)\s*(PROGR|PROGRAMME?|PROGRAM)$/i, '');
+            
+            // Remove other common suffixes
+            cleaned = cleaned.replace(/,?\s*(MASTER'?S?\s*)?(PROGRAMME?|PROGRAM)$/i, '');
+            
+            // Convert to title case
+            cleaned = cleaned.toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
+            
+            // Fix common abbreviations that should stay uppercase
+            cleaned = cleaned.replace(/\bAi\b/g, 'AI');
+            cleaned = cleaned.replace(/\bIt\b/g, 'IT');
+            cleaned = cleaned.replace(/\bHci\b/g, 'HCI');
+            cleaned = cleaned.replace(/\bUi\b/g, 'UI');
+            cleaned = cleaned.replace(/\bUx\b/g, 'UX');
+            
+            return cleaned.trim();
+        }
+
+        // NEW: Extract program code from master's program name
+        function extractMasterProgramCode(masterName) {
+            const codeMapping = {
+                'ENGINEERING MATHEMATICS AND COMPUTATIONAL SCIENCE': 'MPMCS',
+                'COMPUTER SCIENCE': 'MPALG',
+                'SOFTWARE ENGINEERING AND TECHNOLOGY': 'MPSOF',
+                'DATA SCIENCE AND AI': 'MPDSC',
+                'APPLIED MECHANICS': 'MPAME',
+                'MATERIALS ENGINEERING': 'MPAEM'
+                // Add more mappings as needed
+            };
+            
+            const upperName = masterName.toUpperCase();
+            
+            // Check for exact matches first
+            for (const [name, code] of Object.entries(codeMapping)) {
+                if (upperName.includes(name)) {
+                    return code;
+                }
+            }
+            
+            // Fallback: create code from first letters
+            const words = masterName.split(/[\s,]+/).filter(word => 
+                word.length > 2 && !['MSC', 'PROGR', 'PROGRAMME', 'PROGRAM', 'AND', 'THE', 'OF'].includes(word.toUpperCase())
+            );
+            
+            if (words.length >= 2) {
+                return 'MP' + words.slice(0, 3).map(w => w.charAt(0).toUpperCase()).join('');
+            }
+            
+            return 'MPGEN'; // Generic fallback
+        }
 
         // Enhanced Program Selection Functions
         function openProgramSelection() {
@@ -1423,6 +1871,91 @@
             updateSelectedProgramInfo();
         }
 
+        function renderMastersProgramsGrid() {
+            const container = document.getElementById('programsGrid');
+            
+            if (programSelectionState.filteredPrograms.length === 0) {
+                container.innerHTML = `
+                    <div class="no-results">
+                        <h3>No master's programs found</h3>
+                        <p>Try adjusting your search terms</p>
+                        <button class="clear-search-btn" onclick="clearProgramSearch()">Clear Search</button>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = programSelectionState.filteredPrograms.map(program => {
+                // Get the best available explanation
+                const explanation = program.full_explanation || 
+                                program.explanation || 
+                                program.character_implication || 
+                                program.description ||
+                                'Advanced specialization in this field.';
+                
+                // Truncate for card display but show more than before
+                const cardExplanation = explanation.length > 200 ? 
+                                    explanation.substring(0, 197) + '...' : 
+                                    explanation;
+                
+                return `
+                    <div class="program-card ${programSelectionState.selectedProgram === program.name ? 'selected' : ''}" 
+                        onclick="selectMastersProgramInModal('${program.name.replace(/'/g, "\\'")}', '${program.code}')">
+                        <div class="program-code">${program.code}</div>
+                        <div class="program-title">${program.name}</div>
+                        <div class="program-description">${cardExplanation}</div>
+                        <div class="program-footer">
+                            <span class="learn-more">Master's Specialization</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            console.log('🐛 DEBUG: Rendered masters programs grid with enhanced explanations');
+        }
+
+        function setupMastersProgramSearch() {
+            const searchInput = document.getElementById('programSearchInput');
+            searchInput.value = '';
+            searchInput.placeholder = 'Search master\'s programs...';
+            
+            searchInput.oninput = (e) => {
+                filterMastersPrograms(e.target.value);
+            };
+        }
+
+        function filterMastersPrograms(searchTerm) {
+            const term = searchTerm.toLowerCase();
+            const allMasterPrograms = gameState.currentChoice.options.map((option, index) => ({
+                code: `MASTER_${index + 1}`,
+                name: cleanMasterProgramName(option.description),
+                explanation: option.character_implication || `This specialization will shape your expertise and career path.`,
+                keywords: option.keywords || ["master's", "specialization", "advanced"],
+                url: "#",
+                originalDescription: option.description
+            }));
+            
+            programSelectionState.filteredPrograms = allMasterPrograms.filter(program => {
+                const matchesSearch = !term || 
+                    program.name.toLowerCase().includes(term) ||
+                    program.code.toLowerCase().includes(term) ||
+                    program.explanation.toLowerCase().includes(term) ||
+                    program.keywords.some(keyword => keyword.toLowerCase().includes(term));
+                
+                return matchesSearch;
+            });
+            
+            renderMastersProgramsGrid();
+        }
+
+        function selectMastersProgramInModal(programName, programCode) {
+            console.log('🎓 Selected master\'s program in modal:', programName, 'Code:', programCode);
+            programSelectionState.selectedProgram = programName;
+            programSelectionState.selectedProgramCode = programCode;
+            renderMastersProgramsGrid();
+            updateSelectedProgramInfo();
+        }
+
         function updateSelectedProgramInfo() {
             const infoContainer = document.getElementById('selectedProgramInfo');
             const nameElement = document.getElementById('selectedProgramName');
@@ -1430,9 +1963,28 @@
             const confirmBtn = document.getElementById('confirmSelectionBtn');
             
             if (programSelectionState.selectedProgram) {
-                const program = programsData.find(p => p.name === programSelectionState.selectedProgram);
-                nameElement.textContent = `${program.code} - ${program.name}`;
-                descriptionElement.textContent = program.explanation.substring(0, 150) + '...';
+                // Check if this is master's selection
+                const isMastersSelection = gameState.currentChoice && gameState.currentChoice.type === 'masters_selection';
+                
+                if (isMastersSelection) {
+                    // For master's selection, find the program in the filtered programs
+                    const program = programSelectionState.filteredPrograms.find(p => p.name === programSelectionState.selectedProgram);
+                    if (program) {
+                        nameElement.textContent = program.name;
+                        descriptionElement.textContent = program.explanation.substring(0, 150) + '...';
+                    } else {
+                        nameElement.textContent = programSelectionState.selectedProgram;
+                        descriptionElement.textContent = 'Master\'s program specialization';
+                    }
+                } else {
+                    // For regular program selection
+                    const program = programsData.find(p => p.name === programSelectionState.selectedProgram);
+                    if (program) {
+                        nameElement.textContent = `${program.code} - ${program.name}`;
+                        descriptionElement.textContent = program.explanation.substring(0, 150) + '...';
+                    }
+                }
+                
                 infoContainer.classList.add('active');
                 confirmBtn.classList.add('active');
             } else {
@@ -1447,6 +1999,7 @@
             renderProgramsGrid();
         }
 
+        // Updated confirmProgramSelection to handle cleaned names and codes
         function confirmProgramSelection() {
             console.log('🐛 DEBUG confirmProgramSelection called:', {
                 selectedProgram: programSelectionState.selectedProgram,
@@ -1465,15 +2018,25 @@
             if (isMastersSelection) {
                 console.log('🎓 Confirming master\'s program selection:', programSelectionState.selectedProgram);
                 
+                // Find the original program data to get the original description for backend
+                const selectedProgram = programSelectionState.filteredPrograms.find(p => 
+                    p.name === programSelectionState.selectedProgram
+                );
+                
+                if (!selectedProgram) {
+                    showStatus('Error: Could not find selected master\'s program', 'error');
+                    return;
+                }
+                
                 // Close modal first
                 closeProgramSelection();
                 
-                // Find the selected option index from the original choice
+                // Find the selected option index from the original choice using ORIGINAL description
                 const selectedIndex = gameState.currentChoice.options.findIndex(option => 
-                    option.description === programSelectionState.selectedProgram
+                    option.description === selectedProgram.originalDescription
                 );
                 
-                console.log('🐛 DEBUG: Found selected index:', selectedIndex);
+                console.log('🐛 DEBUG: Found selected index:', selectedIndex, 'for original:', selectedProgram.originalDescription);
                 
                 if (selectedIndex !== -1) {
                     // Continue with master's selection
@@ -1502,37 +2065,48 @@
             }
         }
 
-        // Handle master's choice selection (similar to makeChoice but for master's programs)
+        // Updated makeMastersChoice to replace introduction with selection
         async function makeMastersChoice(choiceIndex) {
             if (gameState.isGenerating) {
                 showStatus('Please wait while processing...', 'loading');
                 return;
             }
 
-            // Add a visual indication that master's program was selected
-            const masterSelectionDiv = document.createElement('div');
-            masterSelectionDiv.className = 'choice-container completed masters-selection fade-in';
-            masterSelectionDiv.innerHTML = `
-                <div class="choice-header completed masters-selection">
-                    <div class="choice-title">
-                        <span class="choice-badge masters completed">🎓 Master's Program Selected</span>
-                        Master's Program Selection
-                    </div>
-                </div>
-                <div class="choice-content">
-                    <div class="choice-situation">${gameState.currentChoice.situation}</div>
-                    <div class="choice-selected">
-                        <div class="choice-selected-text">✅ Selected: ${gameState.currentChoice.options[choiceIndex].description}</div>
+            // Update the current choice container to show the selection
+            const currentChoiceContainer = document.querySelector('.choice-container.current.masters-selection');
+            if (currentChoiceContainer) {
+                // Remove the current class and update to completed
+                currentChoiceContainer.classList.remove('current');
+                currentChoiceContainer.classList.add('completed');
+                
+                // Update header
+                const header = currentChoiceContainer.querySelector('.choice-header');
+                header.classList.add('completed');
+                
+                // Update badge
+                const badge = currentChoiceContainer.querySelector('.choice-badge');
+                badge.classList.add('completed');
+                badge.textContent = '✅ Master\'s Selected';
+                
+                // Replace the introduction text and button with the selection
+                const choiceContent = currentChoiceContainer.querySelector('.choice-content');
+                const introContainer = choiceContent.querySelector('#mastersIntroInChoice');
+                const continueButton = choiceContent.querySelector('#mastersChoiceBtn');
+                
+                if (introContainer && continueButton) {
+                    // Create selection display
+                    const selectionDiv = document.createElement('div');
+                    selectionDiv.className = 'choice-selected';
+                    selectionDiv.innerHTML = `
+                        <div class="choice-selected-text">✅ Selected: ${cleanMasterProgramName(gameState.currentChoice.options[choiceIndex].description)}</div>
                         <div class="choice-selected-implication">→ ${gameState.currentChoice.options[choiceIndex].character_implication}</div>
-                    </div>
-                </div>
-            `;
-            
-            // Add to story content at the top
-            if (storyContent.children.length > 0) {
-                storyContent.insertBefore(masterSelectionDiv, storyContent.firstChild);
-            } else {
-                storyContent.appendChild(masterSelectionDiv);
+                    `;
+                    
+                    // Replace introduction and button with selection
+                    choiceContent.removeChild(introContainer);
+                    choiceContent.removeChild(continueButton);
+                    choiceContent.appendChild(selectionDiv);
+                }
             }
 
             try {
@@ -1809,266 +2383,6 @@ Are you ready to discover which program will unlock your potential?`;
             }
         }
 
-        // Display choice options in a contained format
-        function displayChoice(choice) {
-            gameState.currentChoice = choice;
-            
-            // Special handling for master's selection - open modal instead of regular choice display
-            if (choice.type === 'masters_selection') {
-                displayMastersSelectionModal(choice);
-                return;
-            }
-            
-            // Create choice container
-            const choiceContainer = document.createElement('div');
-            choiceContainer.className = 'choice-container current fade-in';
-            choiceContainer.id = `choice-${gameState.choiceHistory.length}`;
-            
-            // Create choice header
-            const choiceHeader = document.createElement('div');
-            choiceHeader.className = 'choice-header';
-            
-            const choiceTitle = document.createElement('div');
-            choiceTitle.className = 'choice-title';
-            
-            const badge = document.createElement('span');
-            badge.className = 'choice-badge';
-            badge.textContent = `Choice ${gameState.choiceHistory.length + 1}`;
-            
-            choiceTitle.innerHTML = `${choice.title}`;
-            choiceTitle.prepend(badge);
-            
-            choiceHeader.appendChild(choiceTitle);
-            
-            // Create choice content
-            const choiceContent = document.createElement('div');
-            choiceContent.className = 'choice-content';
-            
-            // Add situation text
-            const situationDiv = document.createElement('div');
-            situationDiv.className = 'choice-situation';
-            situationDiv.textContent = choice.situation;
-            choiceContent.appendChild(situationDiv);
-            
-            // Create options container
-            const optionsContainer = document.createElement('div');
-            choice.options.forEach((option, index) => {
-                const optionDiv = document.createElement('div');
-                optionDiv.className = 'choice-option';
-                optionDiv.onclick = () => makeChoice(index);
-                optionDiv.innerHTML = `
-                    <span class="choice-number">${index + 1}</span>
-                    <div class="choice-text">
-                        ${option.description}
-                        <div class="choice-implication">→ ${option.character_implication}</div>
-                    </div>
-                `;
-                optionsContainer.appendChild(optionDiv);
-            });
-            
-            choiceContent.appendChild(optionsContainer);
-            
-            choiceContainer.appendChild(choiceHeader);
-            choiceContainer.appendChild(choiceContent);
-            
-            // Add to story content at the top
-            if (storyContent.children.length > 0) {
-                storyContent.insertBefore(choiceContainer, storyContent.firstChild);
-            } else {
-                storyContent.appendChild(choiceContainer);
-            }
-            
-            storyContent.scrollTop = 0;
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-
-        // Display master's selection using the enhanced modal (same as program selection)
-        function displayMastersSelectionModal(choice) {
-            console.log('🎓 Opening master\'s selection modal');
-            
-            // Store the choice for later use
-            gameState.currentChoice = choice;
-            
-            // Update modal content for master's selection
-            const modal = document.getElementById('programSelectionModal');
-            const modalHeader = modal.querySelector('.modal-header h2');
-            const modalCloseBtn = modal.querySelector('.modal-close');
-            const selectionDescription = document.getElementById('selectionDescription');
-            
-            // Update header and description for master's selection
-            modalHeader.innerHTML = '🎓 Choose Your Master\'s Program';
-            selectionDescription.textContent = `${gameState.player.name}, it's time to choose your master's specialization! This decision will shape your final years at Chalmers and determine your expertise area. Each master's program offers unique opportunities and career paths.`;
-            
-            // Hide the close button for master's selection (mandatory choice)
-            modalCloseBtn.style.display = 'none';
-            
-            // Set up master's selection state
-            programSelectionState.selectedProgram = null;
-            programSelectionState.selectedProgramCode = null;
-            programSelectionState.isOpen = true;
-            
-            // Convert choice options to program-like format for the modal
-            const masterPrograms = choice.options.map((option, index) => ({
-                code: `MASTER_${index + 1}`,
-                name: option.description,
-                explanation: option.character_implication || `This specialization will shape your expertise and career path.`,
-                keywords: option.keywords || ["master's", "specialization", "advanced"],
-                url: "#"
-            }));
-            
-            // Update filtered programs for master's selection
-            programSelectionState.filteredPrograms = masterPrograms;
-            
-            // Show modal
-            modal.classList.add('active');
-            document.body.style.overflow = 'hidden';
-            
-            // Update confirm button text
-            const confirmBtn = document.getElementById('confirmSelectionBtn');
-            confirmBtn.innerHTML = `
-                <span>Continue with Selected Master's Program</span>
-                <span>🎓</span>
-            `;
-            
-            // Render the master's programs grid
-            renderMastersProgramsGrid();
-            setupMastersProgramSearch();
-            updateSelectedProgramInfo();
-            
-            // Focus on search input
-            setTimeout(() => {
-                document.getElementById('programSearchInput').focus();
-            }, 300);
-            
-            showStatus('Choose your master\'s specialization to continue', 'ready');
-        }
-
-        // Render master's programs grid (similar to regular programs but for master's options)
-        function renderMastersProgramsGrid() {
-            const container = document.getElementById('programsGrid');
-            
-            if (programSelectionState.filteredPrograms.length === 0) {
-                container.innerHTML = `
-                    <div class="no-results">
-                        <h3>No master's programs found</h3>
-                        <p>Try adjusting your search terms</p>
-                        <button class="clear-search-btn" onclick="clearProgramSearch()">Clear Search</button>
-                    </div>
-                `;
-                return;
-            }
-            
-            container.innerHTML = programSelectionState.filteredPrograms.map(program => `
-                <div class="program-card ${programSelectionState.selectedProgram === program.name ? 'selected' : ''}" 
-                     onclick="selectMastersProgramInModal('${program.name.replace(/'/g, "\\'")}', '${program.code}')">
-                    <div class="program-code">${program.code}</div>
-                    <div class="program-title">${program.name}</div>
-                    <div class="program-description">${program.explanation}</div>
-                    <div class="program-keywords">
-                        ${program.keywords.slice(0, 4).map(keyword => 
-                            `<span class="program-keyword">${keyword}</span>`
-                        ).join('')}
-                    </div>
-                    <div class="program-footer">
-                        <span class="learn-more">Master's Specialization</span>
-                    </div>
-                </div>
-            `).join('');
-            
-            console.log('🐛 DEBUG: Rendered masters programs grid, selected program:', programSelectionState.selectedProgram);
-        }
-
-        // Setup search for master's programs
-        function setupMastersProgramSearch() {
-            const searchInput = document.getElementById('programSearchInput');
-            searchInput.value = '';
-            searchInput.placeholder = 'Search master\'s programs...';
-            
-            searchInput.oninput = (e) => {
-                filterMastersPrograms(e.target.value);
-            };
-        }
-
-        // Filter master's programs
-        function filterMastersPrograms(searchTerm) {
-            const term = searchTerm.toLowerCase();
-            const allMasterPrograms = gameState.currentChoice.options.map((option, index) => ({
-                code: `MASTER_${index + 1}`,
-                name: option.description,
-                explanation: option.character_implication || `This specialization will shape your expertise and career path.`,
-                keywords: option.keywords || ["master's", "specialization", "advanced"],
-                url: "#"
-            }));
-            
-            programSelectionState.filteredPrograms = allMasterPrograms.filter(program => {
-                const matchesSearch = !term || 
-                    program.name.toLowerCase().includes(term) ||
-                    program.code.toLowerCase().includes(term) ||
-                    program.explanation.toLowerCase().includes(term) ||
-                    program.keywords.some(keyword => keyword.toLowerCase().includes(term));
-                
-                return matchesSearch;
-            });
-            
-            renderMastersProgramsGrid();
-        }
-
-        // Select master's program in modal
-        function selectMastersProgramInModal(programName, programCode) {
-            console.log('🎓 Selected master\'s program in modal:', programName, 'Code:', programCode);
-            programSelectionState.selectedProgram = programName;
-            programSelectionState.selectedProgramCode = programCode;
-            renderMastersProgramsGrid();
-            updateSelectedProgramInfo();
-        }
-
-        // Updated updateSelectedProgramInfo to handle both regular and master's programs
-        function updateSelectedProgramInfo() {
-            const infoContainer = document.getElementById('selectedProgramInfo');
-            const nameElement = document.getElementById('selectedProgramName');
-            const descriptionElement = document.getElementById('selectedProgramDescription');
-            const confirmBtn = document.getElementById('confirmSelectionBtn');
-            
-            console.log('🐛 DEBUG updateSelectedProgramInfo:', {
-                selectedProgram: programSelectionState.selectedProgram,
-                selectedProgramCode: programSelectionState.selectedProgramCode,
-                isMastersSelection: gameState.currentChoice && gameState.currentChoice.type === 'masters_selection'
-            });
-            
-            if (programSelectionState.selectedProgram) {
-                // Check if this is master's selection
-                const isMastersSelection = gameState.currentChoice && gameState.currentChoice.type === 'masters_selection';
-                
-                if (isMastersSelection) {
-                    // For master's selection, find the program in the filtered programs
-                    const program = programSelectionState.filteredPrograms.find(p => p.name === programSelectionState.selectedProgram);
-                    if (program) {
-                        nameElement.textContent = program.name;
-                        descriptionElement.textContent = program.explanation.substring(0, 150) + '...';
-                    } else {
-                        nameElement.textContent = programSelectionState.selectedProgram;
-                        descriptionElement.textContent = 'Master\'s program specialization';
-                    }
-                } else {
-                    // For regular program selection
-                    const program = programsData.find(p => p.name === programSelectionState.selectedProgram);
-                    if (program) {
-                        nameElement.textContent = `${program.code} - ${program.name}`;
-                        descriptionElement.textContent = program.explanation.substring(0, 150) + '...';
-                    }
-                }
-                
-                infoContainer.classList.add('active');
-                confirmBtn.classList.add('active');
-                
-                console.log('🐛 DEBUG: Button should now be active');
-            } else {
-                infoContainer.classList.remove('active');
-                confirmBtn.classList.remove('active');
-                console.log('🐛 DEBUG: Button should be inactive');
-            }
-        }
-
         // Make choice with enhanced completion display
         async function makeChoice(choiceIndex) {
             if (gameState.isGenerating) {
@@ -2125,7 +2439,7 @@ Are you ready to discover which program will unlock your potential?`;
                     badge.classList.add('completed');
                     badge.textContent = '✅ Completed';
                     
-                    // Highlight the selected option instead of adding text
+                    // Highlight the selected option
                     const selectedOption = currentChoiceContainer.querySelectorAll('.choice-option')[choiceIndex];
                     if (selectedOption) {
                         selectedOption.style.cssText = `
@@ -2180,7 +2494,7 @@ Are you ready to discover which program will unlock your potential?`;
             }
         }
 
-        // Update profile display with proper backend year sync
+        // NEW: Update profile display with comprehensive history
         function updateProfileDisplay() {
             document.getElementById('playerName').textContent = gameState.player.name || 'Not set';
             
@@ -2204,7 +2518,7 @@ Are you ready to discover which program will unlock your potential?`;
             const choiceCount = gameState.player.life_choices?.length || 0;
             document.getElementById('choiceCount').textContent = choiceCount;
             
-            // Use backend year directly - this is the key fix!
+            // Use backend year directly
             const backendYear = gameState.player.year || 1;
             let stageText = `Year ${backendYear}`;
             
@@ -2220,10 +2534,36 @@ Are you ready to discover which program will unlock your potential?`;
                 }
             }
             
+            // NEW: Update journey history section
+            updateJourneyHistory();
+            
             // Update progress bar based on total journey (10 choices total = 5 years × 2 choices per year)
             const maxChoices = 10;
             const progress = Math.min((choiceCount / maxChoices) * 100, 100);
             document.getElementById('progressFill').style.width = `${progress}%`;
+        }
+
+        // NEW: Update journey history display
+        function updateJourneyHistory() {
+            const journeyContent = document.getElementById('journeyContent');
+            const comprehensiveHistory = gameState.player.comprehensive_history;
+            
+            if (comprehensiveHistory && comprehensiveHistory.trim()) {
+                // Remove empty state classes
+                journeyContent.classList.remove('empty');
+                
+                // Display the comprehensive history
+                journeyContent.textContent = comprehensiveHistory;
+                
+                // Auto-scroll to bottom to show latest content
+                setTimeout(() => {
+                    journeyContent.scrollTop = journeyContent.scrollHeight;
+                }, 100);
+            } else {
+                // Show empty state
+                journeyContent.classList.add('empty');
+                journeyContent.textContent = 'Your story begins here. Each choice you make will add to your unique journey through Chalmers University.';
+            }
         }
 
         // Show status message
@@ -2244,8 +2584,6 @@ Are you ready to discover which program will unlock your potential?`;
         document.addEventListener('keydown', function(e) {
             if (programSelectionState.isOpen) {
                 // Both program and master's selection are mandatory - no ESC allowed
-                // (Removed ESC handling entirely)
-                
                 // Allow Enter to confirm selection for both types
                 if (e.key === 'Enter' && programSelectionState.selectedProgram) {
                     confirmProgramSelection();
@@ -2257,6 +2595,6 @@ Are you ready to discover which program will unlock your potential?`;
         init();
     </script>
 
-    <a href="/debug" target="_blank" class="debug-link">Debug Interface</a>
+
 </body>
 </html>

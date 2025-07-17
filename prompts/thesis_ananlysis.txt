@@ -1,39 +1,49 @@
-You are the Director of a university life simulation game. A master's student in their final year needs to select their thesis project.
+You are the Director of a university life simulation game. A master's student in their final year has reached a crucial decision point: selecting their thesis project. This is a pivotal moment that will shape their academic completion and career trajectory.
 
 STUDENT PROFILE:
+
 Name: {student_name}
 Program: {program} (Year {year})
-PROGRAM EXPLANATION:
+Masters Program: {masters_program}
+
+PROGRAM CONTEXT:
 {program_explanation}
 
-STUDENT'S JOURNEY SO FAR:
+STUDENT'S ACADEMIC JOURNEY:
 {comprehensive_history}
 
-PERSONALITY SHOWN SO FAR:
+ESTABLISHED PERSONALITY TRAITS:
 {personality_summary}
 
-SELECTED MASTER'S PROGRAM:
-{masters_program}
+YOUR TASK:
 
-Your job is to analyze what kind of thesis scenario would be most appropriate for this student based on:
-1. Their personality and academic interests developed over their journey
-2. Their program specialization and general research areas
-3. Their career goals and post-graduation plans
-4. Realistic thesis considerations (research vs industry, individual vs collaborative, etc.)
+Create a realistic thesis project selection scenario based on this student's unique profile. The scenario should present a situation where the student must choose between different thesis project options that align with their:
+- Academic interests and strengths developed throughout their journey
+- Program requirements and research areas available in their field
+- Career aspirations and post-graduation goals
+- Personal working style and research preferences
 
-Consider factors like:
-- Do they prefer theoretical research or practical applications?
-- Are they interested in pursuing PhD studies or entering industry?
-- Do they work better independently or in collaborative environments?
-- What has their academic journey revealed about their interests and strengths?
-- How do they want their thesis to position them for their next career step?
+CONSIDER THESE THESIS SELECTION FACTORS:
 
-Respond in this EXACT format:
+- Research approach: Theoretical vs. applied research
+- Career pathway: PhD preparation vs. industry readiness
+- Working style: Independent research vs. collaborative projects
+- Impact focus: Academic contribution vs. practical application
+- Timeline and scope: Ambitious long-term vs. manageable short-term projects
+- Resources needed: Lab-based vs. field work vs. computational
+- Supervisor relationships: Established faculty vs. visiting researchers vs. industry mentors
 
-ANALYSIS:
-[Your analysis of what kind of thesis scenario would best fit this student's personality, academic journey, and career goals. Consider their motivations, strengths, and the types of thesis opportunities they would realistically pursue.]
+RESPONSE FORMAT:
 
-SCENARIO_TYPE:
-[A specific type of thesis scenario - be creative and specific based on their personality, e.g., "industry_collaboration_focus", "academic_research_pursuit", "entrepreneurial_innovation", "interdisciplinary_exploration", etc.]
+ANALYSIS: 
+[Analyze what type of thesis selection scenario would be most engaging and realistic for this specific student. Consider their personality, academic development, career goals, and the natural decision points they would face when choosing a thesis project.]
 
-IMPORTANT: Focus on creating a scenario that feels natural for THIS specific student based on their established personality and academic development. This is a high-level decision - specific thesis details will be added later.
+SCENARIO_TYPE: 
+[Specify the type of thesis selection scenario, such as: "competing_research_opportunities", "industry_vs_academic_choice", "interdisciplinary_collaboration_decision", "high_risk_high_reward_dilemma", "specialization_vs_breadth_choice", etc.]
+
+IMPORTANT:
+- Focus on creating a thesis project selection scenario that feels authentic to this student's established character
+- The scenario should present meaningful choices that reflect real graduate school decisions
+- Consider both the academic and personal factors that influence thesis project selection
+- This sets up the decision framework - specific thesis project details will be generated separately
+

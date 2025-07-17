@@ -593,18 +593,40 @@
         </div>
         
         <div class="tabs">
-            <button class="tab active" onclick="showTab('jump')">🚀 Jump to State</button>
-            <button class="tab" onclick="showTab('profile')">Player Profile</button>
-            <button class="tab" onclick="showTab('scenario')">Last Scenario</button>
+            <button class="tab active" onclick="showTab('profile')">Player Profile</button>
             <button class="tab" onclick="showTab('llm-calls')">LLM Calls</button>
             <button class="tab" onclick="showTab('tools')">Tool Executions</button>
-            <button class="tab" onclick="showTab('full-process')">Full Process</button>
+            <button class="tab" onclick="showTab('jump')">Jump to State</button>
+        </div>
+        
+        <!-- Player Profile Tab -->
+        <div class="tab-content active" id="profile-tab">
+            <div class="debug-panel">
+                <h2>Player Profile (All Fields)</h2>
+                <div id="profile-display">Loading...</div>
+            </div>
+        </div>
+        
+        <!-- LLM Calls Tab -->
+        <div class="tab-content" id="llm-calls-tab">
+            <div class="debug-panel">
+                <h2>Recent LLM Calls</h2>
+                <div id="llm-calls-display">Loading...</div>
+            </div>
+        </div>
+        
+        <!-- Tool Executions Tab -->
+        <div class="tab-content" id="tools-tab">
+            <div class="debug-panel">
+                <h2>Recent Tool Executions</h2>
+                <div id="tools-display">Loading...</div>
+            </div>
         </div>
         
         <!-- Jump to State Tab -->
-        <div class="tab-content active" id="jump-tab">
+        <div class="tab-content" id="jump-tab">
             <div class="debug-panel">
-                <h2>🚀 Jump to Year/Choices</h2>
+                <h2>Jump to Year/Choices</h2>
                 
                 <h3>Quick Setups</h3>
                 <div class="quick-setups" id="quick-setups">
@@ -634,56 +656,47 @@ Social Growth: Organized study groups in the library
 Technical Skills: Completed advanced programming course
 Career Prep: Applied for summer internship at Volvo"></textarea>
                 </div>
-                <button class="jump-btn" onclick="jumpToState()">🚀 Jump to State</button>
+                <button class="jump-btn" onclick="jumpToState()">Jump to State</button>
                 <div id="jumpResult"></div>
-            </div>
-        </div>
-        
-        <!-- Player Profile Tab -->
-        <div class="tab-content" id="profile-tab">
-            <div class="debug-panel">
-                <h2>Player Profile (All Fields)</h2>
-                <div id="profile-display">Loading...</div>
-            </div>
-        </div>
-        
-        <!-- Last Scenario Tab -->
-        <div class="tab-content" id="scenario-tab">
-            <div class="debug-panel">
-                <h2>Last Scenario Generation</h2>
-                <div id="scenario-display">Loading...</div>
-            </div>
-        </div>
-        
-        <!-- LLM Calls Tab -->
-        <div class="tab-content" id="llm-calls-tab">
-            <div class="debug-panel">
-                <h2>Recent LLM Calls</h2>
-                <div id="llm-calls-display">Loading...</div>
-            </div>
-        </div>
-        
-        <!-- Tool Executions Tab -->
-        <div class="tab-content" id="tools-tab">
-            <div class="debug-panel">
-                <h2>Recent Tool Executions</h2>
-                <div id="tools-display">Loading...</div>
-            </div>
-        </div>
-        
-        <!-- Full Process Tab -->
-        <div class="tab-content" id="full-process-tab">
-            <div class="debug-panel">
-                <h2>Complete AI Process</h2>
-                <div id="full-process-display">Loading...</div>
             </div>
         </div>
     </div>
 
     <script>
-        let currentTab = 'jump';
+        let currentTab = 'profile';  // Changed from 'jump' to 'profile'
         let currentSession = '';
         let availableSessions = [];
+        
+        // Map of LLM call types to emojis
+        const llmCallTypeEmojis = {
+            'director_analysis': '🧠',
+            'scenario_creation': '📝',
+            'choice_processing': '⚖️',
+            'profile_update': '👤',
+            'general': '🤖',
+            'analysis': '🔍',
+            'generation': '✨',
+            'processing': '⚙️',
+            'update': '🔄'
+        };
+        
+        function getEmojiForLLMCall(callType) {
+            // Try exact match first
+            if (llmCallTypeEmojis[callType]) {
+                return llmCallTypeEmojis[callType];
+            }
+            
+            // Try partial matches
+            const lowerCallType = callType.toLowerCase();
+            for (const [key, emoji] of Object.entries(llmCallTypeEmojis)) {
+                if (lowerCallType.includes(key)) {
+                    return emoji;
+                }
+            }
+            
+            // Default emoji
+            return '🤖';
+        }
         
         function toggleCollapsible(header) {
             const collapsible = header.parentElement;
@@ -775,13 +788,11 @@ Career Prep: Applied for summer internship at Volvo"></textarea>
             loadSessionsList(); // Load sessions first
             loadQuickSetups(); // Load quick setups for jump tab
             loadPlayerProfile();
-            loadLastScenario();
             loadLLMCalls();
             loadToolExecutions();
-            loadFullProcess();
         }
 
-        // NEW JUMP FUNCTIONALITY
+        // JUMP FUNCTIONALITY
         function loadQuickSetups() {
             console.log('🐛 Loading quick setups...');
             fetch('/api/debug/quick_setups')
@@ -803,14 +814,23 @@ Career Prep: Applied for summer internship at Volvo"></textarea>
         
         function displayQuickSetups(setups) {
             const container = document.getElementById('quick-setups');
-            let html = '';
             
-            Object.entries(setups).forEach(([key, setup]) => {
+            // Convert setups object to array and sort by number of choices
+            const setupsArray = Object.entries(setups).map(([key, setup]) => ({
+                key,
+                ...setup
+            }));
+            
+            // Sort by number of choices (ascending order)
+            setupsArray.sort((a, b) => a.choices.length - b.choices.length);
+            
+            let html = '';
+            setupsArray.forEach(setup => {
                 html += `
                     <div class="quick-setup-card">
                         <div class="quick-setup-title">${setup.description}</div>
                         <div class="quick-setup-desc">Year ${setup.year} • ${setup.choices.length} choices</div>
-                        <button class="quick-setup-btn" onclick="applyQuickSetup('${key}')">
+                        <button class="quick-setup-btn" onclick="applyQuickSetup('${setup.key}')">
                             Apply Setup
                         </button>
                     </div>
@@ -884,7 +904,7 @@ Career Prep: Applied for summer internship at Volvo"></textarea>
             }
         }
         
-        // EXISTING FUNCTIONALITY (keeping all your original functions)
+        // EXISTING FUNCTIONALITY
         function loadPlayerProfile() {
             console.log('🐛 Loading player profile...');
             const url = currentSession ? `/api/debug/player_profile?session_id=${currentSession}` : '/api/debug/player_profile';
@@ -1002,172 +1022,6 @@ Career Prep: Applied for summer internship at Volvo"></textarea>
             container.innerHTML = html;
         }
         
-        function loadLastScenario() {
-            console.log('🐛 Loading last scenario...');
-            fetch('/api/debug/last_scenario')
-                .then(response => {
-                    console.log('🐛 Scenario response status:', response.status);
-                    if (!response.ok) {
-                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    console.log('🐛 Scenario data received:', data);
-                    if (data.success) {
-                        displayLastScenario(data.scenario_generation);
-                    } else {
-                        document.getElementById('scenario-display').innerHTML = 
-                            `<div class="error">Error: ${data.error}</div>`;
-                    }
-                })
-                .catch(error => {
-                    console.error('🐛 Scenario loading error:', error);
-                    document.getElementById('scenario-display').innerHTML = 
-                        `<div class="error">Error loading scenario: ${error.message}<br><br>
-                        This is normal if no scenarios have been generated yet.<br>
-                        Try generating a choice in the main game first.</div>`;
-                });
-        }
-        
-        function displayLastScenario(scenarioGen) {
-            const container = document.getElementById('scenario-display');
-            
-            let html = `
-                <div class="metadata">
-                    <span><strong>Session:</strong> ${scenarioGen.session_id}</span>
-                    <span><strong>Time:</strong> ${new Date(scenarioGen.timestamp).toLocaleString()}</span>
-                    <span class="status-badge ${scenarioGen.success ? 'status-success' : 'status-failed'}">
-                        ${scenarioGen.success ? 'SUCCESS' : 'FAILED'}
-                    </span>
-                    <span class="timing-info">⏱️ ${scenarioGen.total_processing_time.toFixed(2)}s</span>
-                </div>
-            `;
-            
-            // Director Analysis
-            if (scenarioGen.director_analysis) {
-                html += `
-                    <div class="collapsible">
-                        <div class="collapsible-header" onclick="toggleCollapsible(this)">
-                            <span>🧠 Director Analysis</span>
-                            <span class="collapsible-arrow">▶</span>
-                        </div>
-                        <div class="collapsible-content">
-                            <div class="llm-section">
-                                <div class="llm-section-header">
-                                    <span>📝 Prompt</span>
-                                    <span class="info-badge">${scenarioGen.director_analysis.prompt.length} chars</span>
-                                </div>
-                                <div class="prompt-box">${scenarioGen.director_analysis.prompt}</div>
-                            </div>
-                            <div class="llm-section">
-                                <div class="llm-section-header">
-                                    <span>🤖 Raw Response</span>
-                                    <span class="info-badge">${scenarioGen.director_analysis.raw_response.length} chars</span>
-                                </div>
-                                <div class="response-box">${scenarioGen.director_analysis.raw_response}</div>
-                            </div>
-                            <div class="llm-section">
-                                <div class="llm-section-header">
-                                    <span>🔍 Parsed Response</span>
-                                    <span class="info-badge">Structured</span>
-                                </div>
-                                <div class="parsed-box">${formatParsedResponse(scenarioGen.director_analysis.parsed_response)}</div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }
-            
-            // Tool Executions
-            if (scenarioGen.tools_executed && scenarioGen.tools_executed.length > 0) {
-                html += `
-                    <div class="collapsible">
-                        <div class="collapsible-header" onclick="toggleCollapsible(this)">
-                            <span>🔧 Tool Executions (${scenarioGen.tools_executed.length})</span>
-                            <span class="collapsible-arrow">▶</span>
-                        </div>
-                        <div class="collapsible-content">
-                `;
-                
-                // Reverse the order to show most recent tools first
-                [...scenarioGen.tools_executed].reverse().forEach((tool, index) => {
-                    html += `
-                        <div class="tool-execution ${tool.success ? 'success' : 'failed'}">
-                            <div class="tool-header">
-                                <div class="tool-name">${tool.tool_name}</div>
-                                <div>
-                                    <span class="${tool.success ? 'tool-success-indicator' : 'tool-error-indicator'}">
-                                        ${tool.success ? '✅ SUCCESS' : '❌ FAILED'}
-                                    </span>
-                                    <span class="timing-info">⏱️ ${tool.processing_time.toFixed(3)}s</span>
-                                </div>
-                            </div>
-                            <div><strong>Parameters:</strong></div>
-                            <div class="tool-params">${JSON.stringify(tool.parameters, null, 2)}</div>
-                            <div><strong>Result:</strong></div>
-                            <div class="tool-result">${JSON.stringify(tool.raw_result, null, 2)}</div>
-                        </div>
-                    `;
-                });
-                
-                html += `
-                        </div>
-                    </div>
-                `;
-            }
-            
-            // Scenario Creation
-            if (scenarioGen.scenario_creation) {
-                html += `
-                    <div class="collapsible">
-                        <div class="collapsible-header" onclick="toggleCollapsible(this)">
-                            <span>📝 Scenario Creation</span>
-                            <span class="collapsible-arrow">▶</span>
-                        </div>
-                        <div class="collapsible-content">
-                            <div class="llm-section">
-                                <div class="llm-section-header">
-                                    <span>📝 Prompt</span>
-                                    <span class="info-badge">${scenarioGen.scenario_creation.prompt.length} chars</span>
-                                </div>
-                                <div class="prompt-box">${scenarioGen.scenario_creation.prompt}</div>
-                            </div>
-                            <div class="llm-section">
-                                <div class="llm-section-header">
-                                    <span>🤖 Raw Response</span>
-                                    <span class="info-badge">${scenarioGen.scenario_creation.raw_response.length} chars</span>
-                                </div>
-                                <div class="response-box">${scenarioGen.scenario_creation.raw_response}</div>
-                            </div>
-                            <div class="llm-section">
-                                <div class="llm-section-header">
-                                    <span>🔍 Parsed Response</span>
-                                    <span class="info-badge">Structured</span>
-                                </div>
-                                <div class="parsed-box">${formatParsedResponse(scenarioGen.scenario_creation.parsed_response)}</div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }
-            
-            // Final Scenario
-            html += `
-                <div class="collapsible">
-                    <div class="collapsible-header" onclick="toggleCollapsible(this)">
-                        <span>🎯 Final Scenario</span>
-                        <span class="collapsible-arrow">▶</span>
-                    </div>
-                    <div class="collapsible-content">
-                        <div class="json-display">${JSON.stringify(scenarioGen.final_scenario, null, 2)}</div>
-                    </div>
-                </div>
-            `;
-            
-            container.innerHTML = html;
-        }
-        
         function loadLLMCalls() {
             console.log('🐛 Loading LLM calls...');
             fetch('/api/debug/ai_process')
@@ -1200,11 +1054,13 @@ Career Prep: Applied for summer internship at Volvo"></textarea>
             let html = '';
 
             [...llmCalls].reverse().forEach((call, index) => {
+                const emoji = getEmojiForLLMCall(call.call_type);
+                
                 html += `
                     <div class="collapsible">
                         <div class="collapsible-header" onclick="toggleCollapsible(this)">
                             <span>
-                                <strong>${call.call_type}</strong> - 
+                                <strong>${emoji} ${call.call_type}</strong> - 
                                 ${new Date(call.timestamp).toLocaleString()}
                                 <span class="status-badge ${call.success ? 'status-success' : 'status-failed'}">
                                     ${call.success ? 'SUCCESS' : 'FAILED'}
@@ -1291,163 +1147,6 @@ Career Prep: Applied for summer internship at Volvo"></textarea>
             });
             
             container.innerHTML = html || '<div>No tool executions found</div>';
-        }
-        
-        function loadFullProcess() {
-            fetch('/api/debug/ai_process')
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        displayFullProcess(data.debug_data);
-                    } else {
-                        document.getElementById('full-process-display').innerHTML = 
-                            `<div class="error">Error: ${data.error}</div>`;
-                    }
-                })
-                .catch(error => {
-                    document.getElementById('full-process-display').innerHTML = 
-                        `<div class="error">Error loading full process: ${error}</div>`;
-                });
-        }
-        
-        function displayFullProcess(debugData) {
-            const container = document.getElementById('full-process-display');
-            
-            let html = `
-                <div class="metadata">
-                    <span><strong>Total LLM Calls:</strong> ${debugData.total_llm_calls}</span>
-                    <span><strong>Total Tool Executions:</strong> ${debugData.total_tool_executions}</span>
-                    <span><strong>Scenario Generations:</strong> ${debugData.scenario_generations.length}</span>
-                </div>
-                
-                <div class="json-display">${JSON.stringify(debugData, null, 2)}</div>
-            `;
-            
-            container.innerHTML = html;
-        }
-        
-        function formatParsedResponse(parsedResponse) {
-            // If it's a simple object with just content, try to parse the content
-            if (parsedResponse && typeof parsedResponse === 'object' && parsedResponse.content) {
-                const content = parsedResponse.content;
-                
-                // Try to parse if it looks like JSON
-                if (content.trim().startsWith('{') && content.trim().endsWith('}')) {
-                    try {
-                        const parsed = JSON.parse(content);
-                        return formatStructuredResponse(parsed);
-                    } catch (e) {
-                        // If parsing fails, show as sections
-                        return formatDirectorAnalysis(content);
-                    }
-                } else {
-                    // Check if it's director analysis format
-                    if (content.includes('ANALYSIS:') || content.includes('TOOLS_TO_USE:') || content.includes('SCENARIO_TYPE:')) {
-                        return formatDirectorAnalysis(content);
-                    }
-                    
-                    // Otherwise show as plain content
-                    return `<div class="parsed-content">${content}</div>`;
-                }
-            }
-            
-            // Check if it's already a scenario object (title, situation, options)
-            if (parsedResponse && typeof parsedResponse === 'object' && parsedResponse.title && parsedResponse.situation && parsedResponse.options) {
-                return formatStructuredResponse(parsedResponse);
-            }
-            
-            // If it's already a structured object, format it nicely
-            if (parsedResponse && typeof parsedResponse === 'object') {
-                return formatStructuredResponse(parsedResponse);
-            }
-            
-            // Fallback to JSON
-            return `<div class="parsed-json">${JSON.stringify(parsedResponse, null, 2)}</div>`;
-        }
-        
-        function formatDirectorAnalysis(content) {
-            let html = '';
-            const sections = content.split(/\n\n(?=[A-Z_]+:)/);
-            
-            sections.forEach(section => {
-                if (section.trim()) {
-                    const lines = section.split('\n');
-                    const title = lines[0].replace(':', '').trim();
-                    const body = lines.slice(1).join('\n').trim();
-                    
-                    html += `
-                        <div class="parsed-section">
-                            <div class="parsed-section-title">${title}</div>
-                            <div class="parsed-content">${body}</div>
-                        </div>
-                    `;
-                }
-            });
-            
-            return html || `<div class="parsed-content">${content}</div>`;
-        }
-        
-        function formatStructuredResponse(obj) {
-            if (obj.title && obj.situation && obj.options) {
-                // Scenario format - styled like the main interface
-                let html = `
-                    <div class="choice-container" style="margin: 0; border: 2px solid #667eea; background: white;">
-                        <div class="choice-header" style="background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1)); padding: 15px 20px; border-bottom: 1px solid #e9ecef;">
-                            <div class="choice-title" style="font-size: 1.2rem; font-weight: 600; color: #495057; display: flex; align-items: center; gap: 10px;">
-                                <span class="choice-badge" style="background: #667eea; color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 500;">Scenario</span>
-                                ${obj.title}
-                            </div>
-                        </div>
-                        <div class="choice-content" style="padding: 20px;">
-                            <div class="choice-situation" style="margin-bottom: 20px; font-size: 1rem; line-height: 1.6; color: #495057;">
-                                ${obj.situation}
-                            </div>
-                `;
-                
-                obj.options.forEach((option, index) => {
-                    html += `
-                        <div class="choice-option" style="background: rgba(248, 249, 250, 0.9); border: 2px solid #e9ecef; border-radius: 15px; padding: 20px; margin: 15px 0; position: relative;">
-                            <span class="choice-number" style="display: inline-block; width: 30px; height: 30px; background: #667eea; color: white; border-radius: 50%; text-align: center; line-height: 30px; font-weight: bold; margin-right: 15px;">${index + 1}</span>
-                            <div class="choice-text" style="display: inline-block; vertical-align: top; width: calc(100% - 45px);">
-                                ${option.description}
-                                <div class="choice-implication" style="font-size: 0.9rem; color: #6c757d; font-style: italic; margin-top: 10px;">
-                                    → ${option.character_implication}
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                });
-                
-                html += `
-                        </div>
-                    </div>
-                `;
-                return html;
-            }
-            
-            // Generic object formatting
-            let html = '';
-            Object.entries(obj).forEach(([key, value]) => {
-                const title = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-                let content = '';
-                
-                if (Array.isArray(value)) {
-                    content = value.map((item, index) => `${index + 1}. ${typeof item === 'object' ? JSON.stringify(item, null, 2) : item}`).join('\n');
-                } else if (typeof value === 'object') {
-                    content = JSON.stringify(value, null, 2);
-                } else {
-                    content = value;
-                }
-                
-                html += `
-                    <div class="parsed-section">
-                        <div class="parsed-section-title">${title}</div>
-                        <div class="parsed-content">${content}</div>
-                    </div>
-                `;
-            });
-            
-            return html;
         }
         
         // Load data on page load

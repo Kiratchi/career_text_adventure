@@ -13,7 +13,7 @@ from abc import ABC, abstractmethod
 from dotenv import load_dotenv
 import litellm
 from litellm import completion
-import random
+import random, hashlib
 
 # ==================== CONFIGURATION ====================
 
@@ -466,7 +466,7 @@ def load_prompt(prompt_name: str, **kwargs) -> str:
         logger.error(f"📝 Error loading prompt {prompt_name}: {e}")
         raise
     
-# ==================== INTRODUCTION GENERATOR ====================
+# ==================== INTRODUCTION AND MASTER GENERATOR ====================
 
 def generate_chalmers_introduction(player_name: str) -> str:
     """Generate a personalized introduction to Chalmers for the player"""
@@ -503,6 +503,53 @@ def generate_chalmers_introduction(player_name: str) -> str:
     except Exception as e:
         logger.error(f"Error generating introduction: {e}")
         raise Exception(f"Failed to generate introduction: {e}")
+
+
+def generate_masters_selection_introduction(profile: 'PlayerProfile', choice_data: Dict[str, Any]) -> str:
+    """Generate a personalized introduction for master's program selection"""
+    
+    if not llm:
+        raise Exception("LLM is not available. Please check the server configuration.")
+    
+    try:
+        # Get available master's programs list for this student's bachelor program
+        available_masters = program_mapping.get_available_masters_for_bachelor(profile.program)
+        available_masters_text = ', '.join([f"{m['name']} ({m['code']})" for m in available_masters[:8]]) if available_masters else "Various specializations"
+        
+        # Load the master's selection introduction prompt
+        prompt_content = load_prompt(
+            'masters_introduction_analysis',  # This corresponds to the prompt you showed me
+            student_name=profile.name,
+            program=profile.program,
+            year=profile.year,
+            program_explanation=GetProgramsExplanation.get_explanation(profile.program),
+            comprehensive_history=profile.comprehensive_history or "This student has successfully completed their bachelor's degree with various academic and personal growth experiences.",
+            personality_summary=profile.personality_summary or profile.personality_description,
+            available_masters=available_masters_text
+        )
+        
+        logger.info(f"📝 Loaded master's introduction prompt for {profile.name}")
+        
+        messages = [{"role": "user", "content": prompt_content}]
+        
+        introduction = make_llm_call(
+            messages,
+            call_type="masters_selection_introduction",
+            prompt_name="masters_introduction_analysis"
+        )
+        
+        logger.info(f"✅ Generated master's selection introduction for {profile.name}")
+        return introduction
+        
+    except FileNotFoundError as e:
+        logger.error(f"Master's introduction prompt file missing: {e}")
+        raise Exception(f"Master's introduction prompt file not found: prompts/masters_introduction_analysis.txt")
+    except KeyError as e:
+        logger.error(f"Missing variable in master's introduction prompt: {e}")
+        raise Exception(f"Master's introduction prompt has missing variable: {e}")
+    except Exception as e:
+        logger.error(f"Error generating master's introduction: {e}")
+        raise Exception(f"Failed to generate master's introduction: {e}")
 
 # ==================== KNOWLEDGE SYSTEM ====================
 
@@ -601,9 +648,12 @@ class ProgramMappingService:
                     result = {
                         'code': code,
                         'name': program.get('name', f'Master\'s Program {code}'),
-                        'description': program.get('explanation', 'Advanced studies in this field')
+                        'description': program.get('explanation', 'Advanced studies in this field'),
+                        'explanation': program.get('explanation', 'Advanced studies in this field'),  # Add both keys
+                        'details': program.get('details', program.get('explanation', '')),  # Alternative key
                     }
                     self._master_cache[master_code] = result
+                    logger.info(f"📚 Loaded master's program {code}: {result['name'][:50]}...")
                     return result
         
         # If not found, return minimal info
@@ -611,11 +661,12 @@ class ProgramMappingService:
         result = {
             'code': master_code,
             'name': f'Master\'s Program {master_code}',
-            'description': 'Program information not available'
+            'description': 'Program information not available',
+            'explanation': 'Program information not available'
         }
         self._master_cache[master_code] = result
         return result
-    
+
     def get_available_masters_for_bachelor(self, bachelor_code: str) -> List[Dict[str, str]]:
         """Get all available master's programs for a given bachelor program"""
         # Load the bidirectional mapping
@@ -633,8 +684,9 @@ class ProgramMappingService:
             master_info = self.get_master_program_info(master_code)
             master_programs.append(master_info)
         
-        return master_programs
-    
+        logger.info(f"📚 Found {len(master_programs)} master's programs for {bachelor_code}")
+        return master_programs    
+
     def get_program_code_from_name(self, program_name: str) -> str:
         """Get program code from program name (for backward compatibility)"""
         # Load all programs and find matching name
@@ -1163,18 +1215,18 @@ class GameDirector:
             return "mottagning"
         
         # Master's program selection (after 5 choices = end of year 3)
-        if choices_count == 5 and not profile.selected_masters_program:
+        if choices_count == 5:
             logger.info("🎓 SCENARIO TYPE: Master's Program Selection (5 choices)")
             return "masters_selection"
         
         # Exchange opportunity (50% chance at 6 or 8 choices during master's)
-        if choices_count in [6, 8] and profile.year >= 4 and not self._has_done_exchange(profile):
+        if choices_count == 6:
             if self._roll_exchange_chance(profile, choices_count):
                 logger.info(f"✈️ SCENARIO TYPE: Exchange (50% chance at {choices_count} choices)")
                 return "exchange"
         
         # Thesis project selection (at 9 choices = mid year 5)
-        if choices_count == 9 and not self._has_done_thesis(profile):
+        if choices_count == 9:
             logger.info("📝 SCENARIO TYPE: Thesis Project Selection (9 choices)")
             return "thesis"
         
@@ -1201,6 +1253,10 @@ class GameDirector:
         
         try:
             start_time = time.time()
+            
+            # SPECIAL CASE: Master's selection now uses the new introduction + modal flow
+            if scenario_type == "masters_selection":
+                return self._create_masters_selection_scenario(profile)
             
             # STEP 2.5: Get tools and prompt for this scenario type
             tools_to_use, prompt_name = self._get_scenario_config(scenario_type)
@@ -1236,12 +1292,106 @@ class GameDirector:
             logger.error(f"🎬 Error generating {scenario_type} scenario: {e}")
             return self._create_ai_crash_fallback(profile)
 
+    def _create_masters_selection_scenario(self, profile: Any) -> Dict[str, Any]:
+        """Create master's selection scenario - FIXED VERSION with proper option creation"""
+        
+        logger.info("🎓 Creating master's selection scenario for new introduction + modal flow")
+        
+        # Get available master's programs for this student's bachelor program
+        available_masters = program_mapping.get_available_masters_for_bachelor(profile.program)
+        
+        if not available_masters:
+            logger.warning(f"No master's programs found for {profile.program}")
+            # Fallback master's programs with proper explanations
+            available_masters = [
+                {
+                    "code": "MPALG", 
+                    "name": "Computer Science - Algorithms, Languages and Logic", 
+                    "description": "Advanced computer science studies focusing on algorithms and logic"
+                },
+                {
+                    "code": "MPDSC", 
+                    "name": "Data Science and AI", 
+                    "description": "Machine learning and data analysis specialization"
+                },
+                {
+                    "code": "MPSOF", 
+                    "name": "Software Engineering and Technology", 
+                    "description": "Advanced software development and engineering practices"
+                }
+            ]
+        
+        logger.info(f"📚 Total available master's programs: {len(available_masters)}")
+        
+        # Create options from available master's programs
+        options = []
+        
+        # Process each master's program (limit to 6 for UI manageability)
+        programs_to_process = available_masters
+        logger.info(f"🎓 Processing {len(programs_to_process)} programs for options")
+        
+        for i, master in enumerate(programs_to_process):
+            logger.info(f"🎓 Processing master #{i+1}: {master}")
+            
+            # Safely get the master program data
+            master_code = master.get('code', f'UNKNOWN_{i}')
+            master_name = master.get('name', f'Master Program {i+1}')
+            
+            # Get explanation - try multiple possible keys
+            explanation = (
+                master.get('explanation', '') or 
+                master.get('description', '') or 
+                master.get('details', '') or
+                f"Advanced specialization in {master_name.lower()}"
+            )
+            
+            logger.info(f"🎓 Master {i+1} - Code: {master_code}, Name: {master_name}")
+            logger.info(f"🎓 Master {i+1} - Explanation length: {len(explanation)}")
+            
+            # Create the option
+            option = {
+                "id": f"masters_{master_code.lower()}",
+                "description": master_name,  # Use the actual program name
+                "character_implication": explanation,
+                "program_code": master_code
+            }
+            
+            options.append(option)
+            logger.info(f"🎓 Created option {i+1}: {option['description']} (ID: {option['id']})")
+        
+        logger.info(f"🎓 FINAL: Created {len(options)} options total")
+        
+        # Log each option for debugging
+        for i, option in enumerate(options):
+            logger.info(f"🎓 Option {i+1}: {option['description']} - {option['character_implication'][:50]}...")
+        
+        # Create the scenario that will trigger the frontend's new introduction + modal flow
+        scenario = {
+            "type": "masters_selection",  # This is the key that triggers the new flow
+            "title": "🎓 Master's Program Selection Time",
+            "situation": f"",
+            "options": options,
+            "metadata": {
+                "all_programs": available_masters,
+                "bachelor_program": profile.program,
+                "student_year": profile.year,
+                "debug_info": {
+                    "available_masters_count": len(available_masters),
+                    "processed_count": len(programs_to_process),
+                    "final_options_count": len(options)
+                }
+            }
+        }
+        
+        logger.info(f"🎓 Master's selection scenario created with {len(options)} program options")
+        return scenario
+
     def _get_scenario_config(self, scenario_type: str) -> Tuple[List[str], str]:
         """STEP 2.5: Get tools and prompt name for each scenario type"""
         
         scenario_configs = {
             "mottagning": (["studies"], "mottagning_analysis"),
-            "masters_selection": ([], "masters_introduction_analysis"),
+            # REMOVED: "masters_selection" config (now handled specially)
             "exchange": (["exchange"], "exchange_analysis"),
             "thesis": (["studies", "courses"], "thesis_analysis"),
             "career": ([], "career_analysis"),
@@ -1644,10 +1794,17 @@ class GameDirector:
                    for choice in profile.life_choices)
 
     def _roll_exchange_chance(self, profile: Any, choices_count: int) -> bool:
-        """50% chance for exchange, using student name + choices as seed for consistency"""
-        import hashlib
-        seed = hashlib.md5(f"{profile.name}_exchange_{choices_count}".encode()).hexdigest()
-        return int(seed[:8], 16) % 2 == 0
+        """50% chance for exchange, using current time as seed for true randomness"""
+        
+        # Use current timestamp for true randomness
+        current_time = str(time.time())
+        seed = hashlib.md5(f"{current_time}_exchange_{choices_count}".encode()).hexdigest()
+        
+        result = int(seed[:8], 16) % 100 < 60
+        
+        logger.info(f"🎲 Exchange chance roll for {profile.name} (choice {choices_count}): {'YES' if result else 'NO'}")
+        
+        return result
 
 # ==================== GLOBAL INSTANCES ====================
 
@@ -1910,6 +2067,45 @@ def get_profile():
         })
     except Exception as e:
         logger.error(f"Error getting profile: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/api/generate_masters_introduction', methods=['POST'])
+def generate_masters_introduction():
+    """Generate personalized master's program selection introduction"""
+    try:
+        data = request.json
+        session_id = data.get('session_id', 'default')
+        choice_data = data.get('choice_data', {})
+        
+        if session_id not in game_sessions:
+            return jsonify({"success": False, "error": "Session not found"}), 404
+        
+        profile = game_sessions[session_id]
+        
+        # Check if introduction was already generated for this choice
+        # (You could add caching here if needed)
+        
+        # Generate new master's introduction
+        logger.info(f"🎓 Generating master's program selection introduction for {profile.name}")
+        
+        try:
+            introduction_text = generate_masters_selection_introduction(profile, choice_data)
+            
+            return jsonify({
+                "success": True,
+                "introduction": introduction_text,
+                "cached": False
+            })
+            
+        except Exception as intro_error:
+            logger.error(f"Failed to generate master's introduction: {intro_error}")
+            return jsonify({
+                "success": False, 
+                "error": f"Failed to generate master's introduction: {str(intro_error)}"
+            }), 500
+        
+    except Exception as e:
+        logger.error(f"Error in generate_masters_introduction endpoint: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
 
 # ==================== TEST TOOLS ENDPOINT ====================
@@ -2606,6 +2802,50 @@ def debug_scenario_triggers():
         logger.error(f"Error getting scenario triggers: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
 
+@app.route('/api/debug/masters_data', methods=['GET'])
+def debug_masters_data():
+    """Debug endpoint to check master's program data"""
+    try:
+        program_code = request.args.get('program', 'TKBIO')  # Default to TKBIO for testing
+        
+        # Get available master's programs
+        available_masters = program_mapping.get_available_masters_for_bachelor(program_code)
+        
+        # Create test scenario to see what happens
+        test_profile = PlayerProfile()
+        test_profile.name = "Test Student"
+        test_profile.program = program_code
+        test_profile.year = 3
+        
+        # Try to create the scenario
+        if director:
+            scenario = director._create_masters_selection_scenario(test_profile)
+        else:
+            scenario = {"error": "Director not available"}
+        
+        return jsonify({
+            "success": True,
+            "program_code": program_code,
+            "available_masters_count": len(available_masters),
+            "available_masters": available_masters,
+            "scenario_options_count": len(scenario.get('options', [])),
+            "scenario_options": scenario.get('options', []),
+            "scenario_metadata": scenario.get('metadata', {}),
+            "debug_info": {
+                "mapping_service_available": program_mapping is not None,
+                "director_available": director is not None,
+                "knowledge_cache_keys": list(knowledge._cache.keys()) if hasattr(knowledge, '_cache') else []
+            }
+        })
+        
+    except Exception as e:
+        import traceback
+        return jsonify({
+            "success": False,
+            "error": str(e),
+            "traceback": traceback.format_exc()
+        }), 500
+    
 # ==================== MAIN ====================
 
 if __name__ == '__main__':
