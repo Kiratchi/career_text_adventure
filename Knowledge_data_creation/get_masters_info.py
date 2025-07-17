@@ -1,8 +1,8 @@
 """
-Master Programme Info Extractor
+Programme Info Extractor
 
-This script extracts basic information about master's programmes and generates
-AI-powered explanations tailored for pre-bachelor students.
+This script extracts basic information about both master's and bachelor's programmes 
+and generates AI-powered explanations tailored for pre-bachelor students.
 
 Requirements:
 - Input file: programme syllabuses JSON in 'Files' directory
@@ -10,7 +10,7 @@ Requirements:
 - Environment variables: LITELLM_API_KEY, LITELLM_BASE_URL
 
 Usage:
-    python master_programme_info_extractor.py
+    python programme_info_extractor.py
 """
 
 import os
@@ -23,14 +23,14 @@ from tqdm import tqdm
 from typing import Optional, List, Dict, Any
 
 
-class MasterProgrammeInfoExtractor:
+class ProgrammeInfoExtractor:
     """
-    A class to extract basic information about master's programmes.
+    A class to extract basic information about both master's and bachelor's programmes.
     """
     
     def __init__(self, data_file: str = None, api_key: str = None, base_url: str = None, model: str = None):
         """
-        Initialize the master programme info extractor.
+        Initialize the programme info extractor.
         
         Args:
             data_file: Path to the programme data JSON file. If None, uses default location.
@@ -76,17 +76,18 @@ class MasterProgrammeInfoExtractor:
         with open(self.data_file, "r", encoding="utf-8") as f:
             return json.load(f)
     
-    def get_all_masters(self, year: str = "2024/2025") -> List[Dict[str, str]]:
+    def get_all_programmes_by_type(self, programme_type: str, year: str = "2024/2025") -> List[Dict[str, str]]:
         """
-        Get all master's programmes with their basic information.
+        Get all programmes of a specific type with their basic information.
         
         Args:
+            programme_type: Type of programme ("master" or "bachelor")
             year: Academic year to filter by
             
         Returns:
             List of dictionaries with code, name, and explanation
         """
-        masters_list = []
+        programmes_list = []
         
         for programme in self.programmes:
             # Skip fake programmes
@@ -97,32 +98,35 @@ class MasterProgrammeInfoExtractor:
             if programme.get("acYear") != year:
                 continue
             
-            # Check if it's a master's programme (typically starts with "MP")
+            # Check programme type based on code prefix
             code = programme.get("pCode", "").strip()
-            if not code.startswith("MP"):
+            if programme_type == "master" and not code.startswith("MP"):
+                continue
+            elif programme_type == "bachelor" and not code.startswith("TK"):
                 continue
             
             # Extract basic information
             name = self._clean_name(programme.get("name", ""))
             explanation = self._extract_explanation(programme)
             
-            masters_info = {
+            programme_info = {
                 "code": code,
                 "name": name,
                 "explanation": explanation
             }
             
-            masters_list.append(masters_info)
+            programmes_list.append(programme_info)
         
         # Sort by code for consistent output
-        return sorted(masters_list, key=lambda x: x["code"])
+        return sorted(programmes_list, key=lambda x: x["code"])
     
-    def generate_explanation_for_prebach_students(self, programme_data: Dict[str, Any]) -> str:
+    def generate_explanation_for_prebach_students(self, programme_data: Dict[str, Any], programme_type: str = "master") -> str:
         """
-        Generate an AI explanation of a master's programme for pre-bachelor students.
+        Generate an AI explanation of a programme for pre-bachelor students.
         
         Args:
             programme_data: Complete programme data dictionary
+            programme_type: Type of programme ("master" or "bachelor")
             
         Returns:
             AI-generated explanation tailored for pre-bachelor students
@@ -137,15 +141,26 @@ class MasterProgrammeInfoExtractor:
         # Format the programme data for the LLM
         programme_info = pprint.pformat(programme_data, width=120, compact=True)
         
-        prompt = (
-            "You are writing programme descriptions for pre-bachelor students who are considering their future master's degree options. "
-            "Based on the following master's programme information, write a compelling and informative explanation that helps "
-            "pre-bachelor students understand what this programme is about, what they'll learn, and what career opportunities it opens up. "
-            "Write in an engaging tone that speaks directly to students. Keep it concise (3-4 sentences) but inspiring. "
-            "Focus on practical applications, real-world impact, and the exciting possibilities this programme offers. "
-            "Avoid mentioning the programme name directly since it will be shown separately.\n\n"
-            f"Programme information:\n{programme_info}"
-        )
+        if programme_type == "master":
+            prompt = (
+                "You are writing programme descriptions for pre-bachelor students who are considering their future master's degree options. "
+                "Based on the following master's programme information, write a compelling and informative explanation that helps "
+                "pre-bachelor students understand what this programme is about, what they'll learn, and what career opportunities it opens up. "
+                "Write in an engaging tone that speaks directly to students. Keep it concise (3-4 sentences) but inspiring. "
+                "Focus on practical applications, real-world impact, and the exciting possibilities this programme offers. "
+                "Avoid mentioning the programme name directly since it will be shown separately.\n\n"
+                f"Programme information:\n{programme_info}"
+            )
+        else:  # bachelor
+            prompt = (
+                "You are writing programme descriptions for pre-bachelor students who are considering their bachelor's degree options. "
+                "Based on the following bachelor's programme information, write a compelling and informative explanation that helps "
+                "students understand what this programme is about, what they'll learn, and what career paths it can lead to. "
+                "Write in an engaging tone that speaks directly to students. Keep it concise (3-4 sentences) but inspiring. "
+                "Focus on practical applications, real-world impact, and the exciting possibilities this programme offers. "
+                "Avoid mentioning the programme name directly since it will be shown separately.\n\n"
+                f"Programme information:\n{programme_info}"
+            )
 
         try:
             response = litellm.completion(
@@ -163,28 +178,30 @@ class MasterProgrammeInfoExtractor:
         except Exception as e:
             raise RuntimeError(f"LLM call failed: {e}")
 
-    def get_specified_masters_with_ai(
+    def get_specified_programmes_with_ai(
         self, 
-        master_codes: List[str], 
+        programme_codes: List[str], 
+        programme_type: str,
         year: str = "2024/2025",
         dry_run: bool = False
     ) -> List[Dict[str, str]]:
         """
-        Get information for specified master's programmes with AI-generated explanations.
+        Get information for specified programmes with AI-generated explanations.
         
         Args:
-            master_codes: List of master's programme codes to extract
+            programme_codes: List of programme codes to extract
+            programme_type: Type of programme ("master" or "bachelor")
             year: Academic year to filter by
             dry_run: If True, uses placeholder explanations instead of calling LLM
             
         Returns:
             List of dictionaries with code, name, and AI-generated explanation
         """
-        masters_list = []
+        programmes_list = []
         found_codes = set()
         
         print(f"\n{'='*60}")
-        print(f"EXTRACTING {len(master_codes)} MASTER'S PROGRAMMES WITH AI EXPLANATIONS")
+        print(f"EXTRACTING {len(programme_codes)} {programme_type.upper()}'S PROGRAMMES WITH AI EXPLANATIONS")
         print(f"{'='*60}")
         
         mode = "dry run" if dry_run else "AI explanation generation"
@@ -202,7 +219,7 @@ class MasterProgrammeInfoExtractor:
             
             # Check if this programme is in our specified list
             code = programme.get("pCode", "").strip()
-            if code not in master_codes:
+            if code not in programme_codes:
                 continue
             
             found_codes.add(code)
@@ -215,30 +232,30 @@ class MasterProgrammeInfoExtractor:
                 explanation = "(AI explanation placeholder)"
             else:
                 try:
-                    explanation = self.generate_explanation_for_prebach_students(programme)
+                    explanation = self.generate_explanation_for_prebach_students(programme, programme_type)
                 except Exception as e:
                     explanation = f"Error generating explanation: {e}"
                     print(f"  ⚠️ Error for {code}: {e}")
             
-            masters_info = {
+            programme_info = {
                 "code": code,
                 "name": name,
                 "explanation": explanation
             }
             
-            masters_list.append(masters_info)
+            programmes_list.append(programme_info)
         
         # Report missing programmes
-        missing_codes = set(master_codes) - found_codes
+        missing_codes = set(programme_codes) - found_codes
         if missing_codes:
             print(f"\n⚠️ Warning: Could not find programmes: {sorted(missing_codes)}")
         
-        print(f"\n✅ Successfully processed {len(masters_list)} programmes")
+        print(f"\n✅ Successfully processed {len(programmes_list)} programmes")
         
         # Sort by the order in the input list for consistent output
-        masters_list.sort(key=lambda x: master_codes.index(x["code"]) if x["code"] in master_codes else 999)
+        programmes_list.sort(key=lambda x: programme_codes.index(x["code"]) if x["code"] in programme_codes else 999)
         
-        return masters_list
+        return programmes_list
     
     def _clean_name(self, name: str) -> str:
         """
@@ -262,9 +279,16 @@ class MasterProgrammeInfoExtractor:
             name = name.replace(" MSc Programme", "")
         elif name.endswith(", MSc"):
             name = name.replace(", MSc", "")
+        elif name.endswith(", BSc Programme"):
+            name = name.replace(", BSc Programme", "")
+        elif name.endswith(" BSc Programme"):
+            name = name.replace(" BSc Programme", "")
+        elif name.endswith(", BSc"):
+            name = name.replace(", BSc", "")
         
         # Additional cleaning
         name = name.replace("Msc", "MSc")
+        name = name.replace("Bsc", "BSc")
         name = name.replace(" And ", " and ")
         
         return name.strip()
@@ -298,7 +322,14 @@ class MasterProgrammeInfoExtractor:
         
         # If no explanation found, create a basic one based on the name
         name = programme.get("name", "")
-        return f"Master's programme in {self._clean_name(name).lower()}."
+        code = programme.get("pCode", "")
+        
+        if code.startswith("MP"):
+            return f"Master's programme in {self._clean_name(name).lower()}."
+        elif code.startswith("TK"):
+            return f"Bachelor's programme in {self._clean_name(name).lower()}."
+        else:
+            return f"Programme in {self._clean_name(name).lower()}."
     
     def _clean_explanation(self, explanation: str) -> str:
         """
@@ -325,75 +356,79 @@ class MasterProgrammeInfoExtractor:
         
         return explanation
     
-    def create_masters_json_with_ai(
+    def create_programmes_json_with_ai(
         self, 
-        master_codes: List[str], 
+        programme_codes: List[str], 
+        programme_type: str,
         year: str = "2024/2025",
         dry_run: bool = False
     ) -> Dict[str, Any]:
         """
-        Create the JSON structure for master's programmes with AI-generated explanations.
+        Create the JSON structure for programmes with AI-generated explanations.
         
         Args:
-            master_codes: List of specific master's codes to include
+            programme_codes: List of specific programme codes to include
+            programme_type: Type of programme ("master" or "bachelor")
             year: Academic year to filter by
             dry_run: If True, uses placeholder explanations instead of calling LLM
             
         Returns:
             Dictionary in the format {"programs": [...]}
         """
-        masters_list = self.get_specified_masters_with_ai(master_codes, year, dry_run)
-        return {"programs": masters_list}
+        programmes_list = self.get_specified_programmes_with_ai(programme_codes, programme_type, year, dry_run)
+        return {"programs": programmes_list}
 
-    def save_masters_json_with_ai(
+    def save_programmes_json_with_ai(
         self, 
         output_path: str, 
-        master_codes: List[str], 
+        programme_codes: List[str], 
+        programme_type: str,
         year: str = "2024/2025",
         dry_run: bool = False
     ) -> Dict[str, Any]:
         """
-        Save master's programmes information with AI explanations to JSON file.
+        Save programmes information with AI explanations to JSON file.
         
         Args:
             output_path: Path where to save the JSON file
-            master_codes: List of specific master's codes to include
+            programme_codes: List of specific programme codes to include
+            programme_type: Type of programme ("master" or "bachelor")
             year: Academic year to filter by
             dry_run: If True, uses placeholder explanations instead of calling LLM
             
         Returns:
-            The generated masters data
+            The generated programmes data
         """
         start_time = time.time()
         
         # Create the JSON data with AI explanations
-        masters_data = self.create_masters_json_with_ai(master_codes, year, dry_run)
+        programmes_data = self.create_programmes_json_with_ai(programme_codes, programme_type, year, dry_run)
         
         # Create output directory if it doesn't exist
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
         
         # Save to file
         with open(output_path, 'w', encoding='utf-8') as f:
-            json.dump(masters_data, f, indent=2, ensure_ascii=False)
+            json.dump(programmes_data, f, indent=2, ensure_ascii=False)
         
         total_time = time.time() - start_time
-        print(f"\n✓ Saved master's programmes data to: {output_path}")
+        print(f"\n✓ Saved {programme_type}'s programmes data to: {output_path}")
         print(f"⏱ Total time: {total_time / 60:.2f} minutes")
         
-        return masters_data
+        return programmes_data
     
-    def preview_masters(self, masters_data: Dict[str, Any], max_programs: int = 5) -> None:
+    def preview_programmes(self, programmes_data: Dict[str, Any], max_programs: int = 5) -> None:
         """
-        Preview the extracted master's programmes data.
+        Preview the extracted programmes data.
         
         Args:
-            masters_data: The masters data dictionary
+            programmes_data: The programmes data dictionary
             max_programs: Maximum number of programmes to preview
         """
-        programs = masters_data.get("programs", [])
+        programs = programmes_data.get("programs", [])
         
         print(f"\n{'='*60}")
-        print(f"PREVIEW OF EXTRACTED MASTER'S PROGRAMMES ({len(programs)} total)")
+        print(f"PREVIEW OF EXTRACTED PROGRAMMES ({len(programs)} total)")
         print(f"{'='*60}")
         
         for i, program in enumerate(programs[:max_programs]):
@@ -405,17 +440,18 @@ class MasterProgrammeInfoExtractor:
         if len(programs) > max_programs:
             print(f"\n... and {len(programs) - max_programs} more programmes")
     
-    def get_available_masters_codes(self, year: str = "2024/2025") -> List[str]:
+    def get_available_programme_codes(self, programme_type: str, year: str = "2024/2025") -> List[str]:
         """
-        Get list of available master's programme codes.
+        Get list of available programme codes by type.
         
         Args:
+            programme_type: Type of programme ("master" or "bachelor")
             year: Academic year to filter by
             
         Returns:
-            List of available master's programme codes
+            List of available programme codes
         """
-        masters_codes = []
+        programme_codes = []
         
         for programme in self.programmes:
             # Skip fake programmes
@@ -426,12 +462,14 @@ class MasterProgrammeInfoExtractor:
             if programme.get("acYear") != year:
                 continue
             
-            # Check if it's a master's programme
+            # Check programme type
             code = programme.get("pCode", "").strip()
-            if code.startswith("MP"):
-                masters_codes.append(code)
+            if programme_type == "master" and code.startswith("MP"):
+                programme_codes.append(code)
+            elif programme_type == "bachelor" and code.startswith("TK"):
+                programme_codes.append(code)
         
-        return sorted(list(set(masters_codes)))
+        return sorted(list(set(programme_codes)))
     
     def get_all_masters_codes(self) -> List[str]:
         """
@@ -482,10 +520,37 @@ class MasterProgrammeInfoExtractor:
             "MPWPS",  # Wireless, Photonics and Space Engineering
         ]
 
+    def get_all_bachelors_codes(self) -> List[str]:
+        """
+        Get the complete list of all bachelor's programme codes.
+        
+        Returns:
+            List of all bachelor's programme codes
+        """
+        return [
+            "TKATK",  # Architecture and Engineering
+            "TKAUT",  # Automation and Mechatronics Engineering
+            "TKBIO",  # Bioengineering
+            "TKDAT",  # Computer Science and Engineering
+            "TKDES",  # Industrial Design Engineering
+            "TKELT",  # Electrical Engineering
+            "TKGBS",  # Global Systems Engineering
+            "TKIEK",  # Industrial Engineering and Management
+            "TKITE",  # Software Engineering
+            "TKKEF",  # Chemical Engineering With Engineering Physics
+            "TKKMT",  # Chemical Engineering
+            "TKMAS",  # Mechanical Engineering
+            "TKMED",  # Biomedical Engineering
+            "TKSAM",  # Civil Engineering
+            "TKTEM",  # Engineering Mathematics
+            "TKTFY",  # Engineering Physics
+            "TKARK",  # Architecture
+        ]
+
 
 def main():
     """
-    Main function to extract all specified master's programmes with AI-generated explanations.
+    Main function to extract both master's and bachelor's programmes with AI-generated explanations.
     """
     try:
         # Configuration
@@ -493,49 +558,60 @@ def main():
         DRY_RUN = False  # Set to True to test without calling LLM
         
         # Initialize the extractor
-        extractor = MasterProgrammeInfoExtractor()
+        extractor = ProgrammeInfoExtractor()
         
-        print(f"Master's Programme Info Extractor with AI Explanations")
+        print(f"Programme Info Extractor with AI Explanations")
         print(f"Target Year: {TARGET_YEAR}")
         print(f"Dry Run Mode: {DRY_RUN}")
         
-        # Get the complete list of master's programmes
+        # Get the programme lists
         all_masters_codes = extractor.get_all_masters_codes()
+        all_bachelors_codes = extractor.get_all_bachelors_codes()
         
         print(f"\n{'='*60}")
-        print(f"EXTRACTING ALL {len(all_masters_codes)} MASTER'S PROGRAMMES")
+        print(f"EXTRACTING PROGRAMMES")
         print(f"{'='*60}")
+        print(f"Master's programmes: {len(all_masters_codes)}")
+        print(f"Bachelor's programmes: {len(all_bachelors_codes)}")
         
-        print(f"Master's programmes to extract:")
-        for i, code in enumerate(all_masters_codes):
-            if i < 10:  # Show first 10
-                print(f"  {code}")
-            elif i == 10:
-                print(f"  ... and {len(all_masters_codes) - 10} more")
-                break
-        
-        # Extract all master's programmes with AI explanations
-        masters_data = extractor.save_masters_json_with_ai(
+        # Extract master's programmes with AI explanations
+        print(f"\n🎓 Processing Master's Programmes...")
+        masters_data = extractor.save_programmes_json_with_ai(
             output_path=os.path.join("Files_created", "masters_programs.json"),
-            master_codes=all_masters_codes,
+            programme_codes=all_masters_codes,
+            programme_type="master",
+            year=TARGET_YEAR,
+            dry_run=DRY_RUN
+        )
+        
+        # Extract bachelor's programmes with AI explanations
+        print(f"\n🎓 Processing Bachelor's Programmes...")
+        bachelors_data = extractor.save_programmes_json_with_ai(
+            output_path=os.path.join("Files_created", "programs.json"),
+            programme_codes=all_bachelors_codes,
+            programme_type="bachelor",
             year=TARGET_YEAR,
             dry_run=DRY_RUN
         )
         
         # Preview the results
-        extractor.preview_masters(masters_data, max_programs=3)
+        print(f"\n{'='*60}")
+        print("MASTER'S PROGRAMMES PREVIEW")
+        print(f"{'='*60}")
+        extractor.preview_programmes(masters_data, max_programs=2)
+        
+        print(f"\n{'='*60}")
+        print("BACHELOR'S PROGRAMMES PREVIEW")
+        print(f"{'='*60}")
+        extractor.preview_programmes(bachelors_data, max_programs=2)
         
         print(f"\n{'='*60}")
         print("EXTRACTION COMPLETE")
         print(f"{'='*60}")
-        print(f"📄 Output file: Files_created/masters_programs.json")
-        print(f"📊 Total programmes extracted: {len(masters_data['programs'])}")
-        
-        # Show sample of the JSON structure
-        print(f"\n🔍 Sample JSON structure:")
-        sample_programs = masters_data["programs"][:1]
-        sample_json = {"programs": sample_programs}
-        print(json.dumps(sample_json, indent=2, ensure_ascii=False))
+        print(f"📄 Master's programmes file: Files_created/masters_programs.json")
+        print(f"📄 Bachelor's programmes file: Files_created/programs.json")
+        print(f"📊 Total master's programmes extracted: {len(masters_data['programs'])}")
+        print(f"📊 Total bachelor's programmes extracted: {len(bachelors_data['programs'])}")
         
     except Exception as e:
         print(f"❌ Error: {e}")

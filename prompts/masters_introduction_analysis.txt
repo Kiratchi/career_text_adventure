@@ -29,7 +29,7 @@ Program: {program} (Year {year})
 
 - **Tone:** Encouraging yet realistic, acknowledging both excitement and uncertainty
 - **Perspective:** Second person ("you") to maintain immersion
-- **Length:** 1-2 short paragraphs
+- **Length:** 1 short paragraph
 - **Structure:** 
   - Opening scene setting
   - Reflection on their bachelor's journey

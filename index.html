@@ -1031,6 +1031,144 @@
             animation: fadeIn 0.5s ease-in;
         }
 
+        /* End screen styling */
+        .end-screen {
+            text-align: center;
+            padding: 40px 20px;
+            animation: fadeIn 0.8s ease-in;
+        }
+
+        .end-screen h2 {
+            color: #4a5568;
+            margin-bottom: 30px;
+            font-size: 2.5rem;
+            background: linear-gradient(135deg, #28a745, #20c997);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .graduation-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            animation: bounce 2s infinite;
+        }
+
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-10px); }
+            60% { transform: translateY(-5px); }
+        }
+
+        .end-summary {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 20px;
+            padding: 30px;
+            margin: 30px 0;
+            font-size: 1.1rem;
+            line-height: 1.8;
+            color: #495057;
+            text-align: left;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+            border: 2px solid rgba(40, 167, 69, 0.2);
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .end-summary::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .end-summary::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+
+        .end-summary::-webkit-scrollbar-thumb {
+            background: #28a745;
+            border-radius: 10px;
+        }
+
+        .end-summary::-webkit-scrollbar-thumb:hover {
+            background: #218838;
+        }
+
+        .end-summary.loading {
+            background: linear-gradient(90deg, #f8f9fa, #e9ecef, #f8f9fa);
+            background-size: 200% 100%;
+            animation: shimmer 2s infinite;
+            color: #6c757d;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 150px;
+        }
+
+        .end-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+
+        .end-stat {
+            background: linear-gradient(135deg, rgba(40, 167, 69, 0.1), rgba(32, 201, 151, 0.1));
+            border: 2px solid rgba(40, 167, 69, 0.3);
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .end-stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #28a745;
+            margin-bottom: 5px;
+        }
+
+        .end-stat-label {
+            color: #6c757d;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .play-again-section {
+            margin-top: 40px;
+            padding: 30px;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+            border-radius: 20px;
+            border: 2px solid rgba(102, 126, 234, 0.2);
+        }
+
+        .play-again-text {
+            font-size: 1.2rem;
+            color: #4a5568;
+            margin-bottom: 25px;
+            font-weight: 600;
+        }
+
+        .play-again-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 18px 40px;
+            border-radius: 25px;
+            font-size: 1.3rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.3);
+            animation: pulse 2s infinite;
+        }
+
+        .play-again-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+            animation: none;
+        }
+
         @media (max-width: 768px) {
             .main-content {
                 grid-template-columns: 1fr;
@@ -1064,6 +1202,18 @@
 
             .program-selection-container {
                 padding: 20px;
+            }
+
+            .end-screen h2 {
+                font-size: 2rem;
+            }
+            
+            .graduation-icon {
+                font-size: 3rem;
+            }
+            
+            .end-stats {
+                grid-template-columns: 1fr 1fr;
             }
         }
 
@@ -2158,7 +2308,13 @@ Take your time. Consider your passions, your strengths, and your vision for the 
                 
                 // Generate next choice
                 setTimeout(() => {
-                    generateNextChoice();
+                    // Check if game should end after this choice
+                    const choiceCount = gameState.player.life_choices?.length || 0;
+                    if (choiceCount >= 10) {
+                        showEndScreen();
+                    } else {
+                        generateNextChoice();
+                    }
                 }, newYear > oldYear ? 2500 : 1500);
                 
             } catch (error) {
@@ -2350,6 +2506,21 @@ Are you ready to discover which program will unlock your potential?`;
                     session_id: gameState.sessionId
                 });
                 
+                // Check if the backend indicates the game has ended
+                if (result.game_ended) {
+                    console.log('🎯 Backend indicates game has ended, showing end screen');
+                    showEndScreen();
+                    return;
+                }
+                
+                // Check if this is the end of the game (after 10 choices) - frontend check
+                const choiceCount = gameState.player.life_choices?.length || 0;
+                if (choiceCount >= 10) {
+                    console.log('🎯 Frontend detected 10+ choices, showing end screen');
+                    showEndScreen();
+                    return;
+                }
+                
                 displayChoice(result.choice);
                 gameState.isGenerating = false;
                 showStatus(`Click on your preferred choice`, 'ready');
@@ -2357,6 +2528,14 @@ Are you ready to discover which program will unlock your potential?`;
             } catch (error) {
                 gameState.isGenerating = false;
                 showStatus('Failed to generate choice. Using fallback scenario.', 'error');
+                
+                // Check if this is the end of the game even for fallback
+                const choiceCount = gameState.player.life_choices?.length || 0;
+                if (choiceCount >= 10) {
+                    console.log('🎯 Fallback detected 10+ choices, showing end screen');
+                    showEndScreen();
+                    return;
+                }
                 
                 // Create a simple fallback choice
                 const fallbackChoice = {
@@ -2481,7 +2660,13 @@ Are you ready to discover which program will unlock your potential?`;
                 
                 // Generate next choice
                 setTimeout(() => {
-                    generateNextChoice();
+                    // Check if game should end after this choice
+                    const choiceCount = gameState.player.life_choices?.length || 0;
+                    if (choiceCount >= 10) {
+                        showEndScreen();
+                    } else {
+                        generateNextChoice();
+                    }
                 }, newYear > oldYear ? 2500 : 1500); // Longer delay if year advanced
                 
             } catch (error) {
@@ -2591,8 +2776,210 @@ Are you ready to discover which program will unlock your potential?`;
             }
         });
 
-        // Initialize the application
-        init();
+        // NEW: Show end screen after completing the journey
+        function showEndScreen() {
+            console.log('🎓 Showing end screen - journey completed!');
+            gameState.isGenerating = false;
+            
+            // Clear the story content
+            storyContent.innerHTML = '';
+            
+            // Create end screen container
+            const endScreenContainer = document.createElement('div');
+            endScreenContainer.className = 'end-screen fade-in';
+            
+            // Calculate stats
+            const choiceCount = gameState.player.life_choices?.length || 0;
+            const currentYear = gameState.player.year || 5;
+            const program = gameState.player.program || 'Engineering Program';
+            const mastersProgram = gameState.player.selected_masters_program || 'Advanced Studies';
+            
+            endScreenContainer.innerHTML = `
+                <div class="graduation-icon">🎓</div>
+                <h2>Congratulations, ${gameState.player.name}!</h2>
+                <p style="font-size: 1.3rem; color: #6c757d; margin-bottom: 30px;">
+                    You've successfully completed your journey through Chalmers University of Technology!
+                </p>
+                
+                <div class="end-stats">
+                    <div class="end-stat">
+                        <div class="end-stat-number">${currentYear}</div>
+                        <div class="end-stat-label">Years at Chalmers</div>
+                    </div>
+                    <div class="end-stat">
+                        <div class="end-stat-number">${choiceCount}</div>
+                        <div class="end-stat-label">Life-Changing Decisions</div>
+                    </div>
+                    <div class="end-stat">
+                        <div class="end-stat-number">1</div>
+                        <div class="end-stat-label">Engineering Degree</div>
+                    </div>
+                    <div class="end-stat">
+                        <div class="end-stat-number">∞</div>
+                        <div class="end-stat-label">Future Possibilities</div>
+                    </div>
+                </div>
+                
+                <h3 style="color: #4a5568; margin: 30px 0 15px 0; font-size: 1.5rem;">Your Complete Journey</h3>
+                <div class="end-summary loading" id="endSummary">
+                    <span>AI is crafting your personalized graduation summary...</span>
+                </div>
+                
+                <div class="play-again-section">
+                    <div class="play-again-text">
+                        Want to explore a different path through Chalmers?
+                    </div>
+                    <button class="play-again-btn" onclick="restartGame()">
+                        🚀 Start a New Journey
+                    </button>
+                </div>
+            `;
+            
+            storyContent.appendChild(endScreenContainer);
+            
+            // Generate and display the comprehensive story summary
+            generateEndSummary();
+            
+            // Update status
+            showStatus('🎉 Congratulations! Your Chalmers journey is complete!', 'ready');
+            
+            // Scroll to top
+            storyContent.scrollTop = 0;
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // NEW: Generate comprehensive end summary
+        async function generateEndSummary() {
+            try {
+                // Try to get a comprehensive summary from the backend
+                // For now, we'll use the existing comprehensive_history and enhance it
+                const comprehensiveHistory = gameState.player.comprehensive_history;
+                
+                if (comprehensiveHistory && comprehensiveHistory.trim()) {
+                    displayEndSummary(comprehensiveHistory);
+                } else {
+                    // Fallback summary if no comprehensive history available
+                    const fallbackSummary = `${gameState.player.name} began their journey at Chalmers University of Technology, studying ${gameState.player.program}. 
+
+Through ${gameState.player.life_choices?.length || 0} meaningful choices, they shaped their academic path, developed their interests, and built lasting relationships. Each decision brought new opportunities and challenges that contributed to their growth as both a student and a person.
+
+During their master's studies in ${gameState.player.selected_masters_program || 'their chosen specialization'}, they deepened their expertise and prepared for their future career. The combination of technical knowledge, practical experience, and personal development has equipped them for success in their chosen field.
+
+This journey through Chalmers has been unique and personal, reflecting the values, interests, and aspirations that ${gameState.player.name} brought to their studies and developed along the way. They leave Chalmers not just with a degree, but with the skills, knowledge, and network to make a meaningful impact in the world.`;
+                    
+                    displayEndSummary(fallbackSummary);
+                }
+            } catch (error) {
+                console.error('Error generating end summary:', error);
+                
+                // Simple fallback if everything fails
+                const simpleFallback = `${gameState.player.name} has successfully completed their engineering degree at Chalmers University of Technology. Through their choices and experiences, they have grown into a well-rounded engineer ready to tackle the challenges of tomorrow.`;
+                
+                displayEndSummary(simpleFallback);
+            }
+        }
+
+        // NEW: Display the end summary text
+        function displayEndSummary(summaryText) {
+            const endSummaryElement = document.getElementById('endSummary');
+            
+            if (!endSummaryElement) {
+                console.error('End summary element not found');
+                return;
+            }
+            
+            // Remove loading styles
+            endSummaryElement.classList.remove('loading');
+            endSummaryElement.innerHTML = '';
+            
+            // Split text into paragraphs and add them
+            const paragraphs = summaryText.split('\n\n');
+            paragraphs.forEach((paragraph, index) => {
+                if (paragraph.trim()) {
+                    const p = document.createElement('p');
+                    p.textContent = paragraph.trim();
+                    p.style.marginBottom = '20px';
+                    p.style.lineHeight = '1.8';
+                    endSummaryElement.appendChild(p);
+                }
+            });
+            
+            // Auto-scroll to show the content
+            setTimeout(() => {
+                endSummaryElement.scrollTop = 0;
+            }, 100);
+        }
+
+        // NEW: Restart the game
+        function restartGame() {
+            console.log('🔄 Restarting game...');
+            
+            // Reset game state
+            gameState = {
+                stage: 'name_input',
+                sessionId: 'session_' + Date.now(),
+                player: {
+                    name: '',
+                    program: '',
+                    programCode: '',
+                    year: 1,
+                    selected_masters_program: '',
+                    personality: 'is just starting their university journey',
+                    life_choices: [],
+                    current_situation: 'beginning their studies',
+                    has_seen_introduction: false,
+                    introduction_text: '',
+                    comprehensive_history: ''
+                },
+                currentChoice: null,
+                isGenerating: false,
+                choiceHistory: []
+            };
+            
+            // Reset program selection state
+            programSelectionState = {
+                selectedProgram: null,
+                selectedProgramCode: null,
+                filteredPrograms: [...programsData],
+                isOpen: false
+            };
+            
+            // Clear story content and show name input
+            storyContent.innerHTML = '';
+            const nameInputSection = document.createElement('div');
+            nameInputSection.className = 'name-input-section';
+            nameInputSection.innerHTML = `
+                <h2>Welcome to Your Chalmers Adventure!</h2>
+                <p>This interactive journey uses real Chalmers University information to create personalized scenarios that will shape your academic path. Every choice matters and influences your future opportunities.</p>
+                
+                <div class="name-input-container">
+                    <input type="text" id="nameInput" class="name-input" placeholder="Enter your name..." />
+                    <button class="name-submit-btn" onclick="submitName()">Start Your Journey</button>
+                </div>
+            `;
+            storyContent.appendChild(nameInputSection);
+            
+            // Update profile display
+            updateProfileDisplay();
+            
+            // Re-initialize the game
+            init();
+            
+            // Focus on name input
+            setTimeout(() => {
+                const newNameInput = document.getElementById('nameInput');
+                if (newNameInput) {
+                    newNameInput.focus();
+                    newNameInput.addEventListener('keypress', function(e) {
+                        if (e.key === 'Enter') {
+                            submitName();
+                        }
+                    });
+                }
+            }, 100);
+            
+            showStatus('Enter your name to begin a new journey', 'ready');
+        }
     </script>
 
 

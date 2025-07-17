@@ -1230,20 +1230,21 @@ class GameDirector:
             logger.info("📝 SCENARIO TYPE: Thesis Project Selection (9 choices)")
             return "thesis"
         
-        # Career preparation (at 10 choices = late year 5)
+        # Career preparation (at 10 choices = late year 5) - FINAL CHOICE
         if choices_count == 10:
-            logger.info("💼 SCENARIO TYPE: Career Preparation (10 choices)")
+            logger.info("💼 SCENARIO TYPE: Career Preparation (10 choices) - FINAL CHOICE")
             return "career"
         
-        # Graduation scenario (at 11+ choices)
+        # GAME SHOULD END AFTER 10 CHOICES - This should not be reached in normal flow
         if choices_count >= 11:
-            logger.info("🎓 SCENARIO TYPE: Graduation (11+ choices)")
-            return "graduation"
+            logger.warning(f"🚨 GAME OVERFLOW: Should have ended at 10 choices! Current: {choices_count}")
+            # Return a special end indicator instead of generating more content
+            return "game_ended"
         
         # DEFAULT: Generate AI-driven scenario for regular choices
         logger.info(f"🤖 SCENARIO TYPE: Standard AI (default for {choices_count} choices)")
         return "standard"
-
+    
     def _generate_scenario(self, profile: Any, scenario_type: str) -> Dict[str, Any]:
         """STEP 2: Generate the scenario based on type - UNIFIED WORKFLOW"""
         
@@ -1251,6 +1252,17 @@ class GameDirector:
             logger.warning(f"🎬 LLM not available for {scenario_type}, using fallback")
             return self._create_ai_crash_fallback(profile)
         
+            # SPECIAL CASE: Game has ended, should not generate more scenarios
+        if scenario_type == "game_ended":
+            logger.info("🎯 GAME ENDED: Returning end signal instead of scenario")
+            return {
+                "type": "game_ended",
+                "title": "Journey Complete",
+                "situation": "The game has ended. Please check the frontend for the end screen.",
+                "options": []
+            }
+        
+
         try:
             start_time = time.time()
             
@@ -1391,11 +1403,9 @@ class GameDirector:
         
         scenario_configs = {
             "mottagning": (["studies"], "mottagning_analysis"),
-            # REMOVED: "masters_selection" config (now handled specially)
             "exchange": (["exchange"], "exchange_analysis"),
             "thesis": (["studies", "courses"], "thesis_analysis"),
             "career": ([], "career_analysis"),
-            "graduation": ([], "graduation_analysis"),
             "standard": (None, "director_analysis")  # Special case - AI decides tools
         }
         
@@ -1800,7 +1810,7 @@ class GameDirector:
         current_time = str(time.time())
         seed = hashlib.md5(f"{current_time}_exchange_{choices_count}".encode()).hexdigest()
         
-        result = int(seed[:8], 16) % 100 < 60
+        result = int(seed[:8], 16) % 100 < 80
         
         logger.info(f"🎲 Exchange chance roll for {profile.name} (choice {choices_count}): {'YES' if result else 'NO'}")
         
@@ -1949,10 +1959,30 @@ def generate_choice():
             return jsonify({"success": False, "error": "AI director not available"}), 503
         
         profile = game_sessions[session_id]
-        logger.info(f"🎮 API REQUEST: Generate choice for session {session_id}")
+        
+        # Check if game should end (10 choices completed)
+        choice_count = len(profile.life_choices)
+        if choice_count >= 10:
+            logger.info(f"🎯 GAME ENDED: Player has {choice_count} choices, ending game")
+            return jsonify({
+                "success": True,
+                "game_ended": True,
+                "message": "Game completed! Show end screen."
+            })
+        
+        logger.info(f"🎮 API REQUEST: Generate choice for session {session_id} (choice #{choice_count + 1})")
         
         # Use the AI Director to decide what happens next
         choice = director.decide_next_scenario(profile)
+        
+        # Double-check if director returned a game_ended signal
+        if choice.get('type') == 'game_ended':
+            logger.info(f"🎯 DIRECTOR SIGNALED GAME END")
+            return jsonify({
+                "success": True,
+                "game_ended": True,
+                "message": "Game completed! Show end screen."
+            })
         
         logger.info(f"🎮 API RESPONSE: Successfully generated scenario for session {session_id}")
         
@@ -2849,7 +2879,7 @@ def debug_masters_data():
 # ==================== MAIN ====================
 
 if __name__ == '__main__':
-    logger.info("🚀 Starting Chalmers Life Journey with SIMPLIFIED AI Director...")
+    logger.info("🚀 Starting Chalmers Life Journey with AI Director...")
     logger.info("📁 Validating knowledge files...")
     
     # Validate knowledge files exist - updated for new system
